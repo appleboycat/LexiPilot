@@ -1,0 +1,4 @@
+# Optional dependencies for rebuilding submission PDFs, PPTX, and diagrams.
+python-pptx>=1.0,<2
+reportlab>=5.0,<6
+cairosvg>=2.9,<3

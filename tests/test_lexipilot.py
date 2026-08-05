@@ -3,8 +3,14 @@ from __future__ import annotations
 import subprocess
 import sys
 
+import pytest
+
 from console_theme import Console, ConsoleTheme
-from lexipilot import looks_like_new_study_request, should_start_new_request_after_completion
+from lexipilot import (
+    looks_like_new_study_request,
+    parse_activity_days,
+    should_start_new_request_after_completion,
+)
 from lexipilot_core import SYSTEM_PROMPT, LexiPilotAgent, build_session_plan
 from lexipilot_tools import LexiPilotToolbox
 
@@ -58,6 +64,15 @@ def test_active_session_detects_new_study_request() -> None:
     assert looks_like_new_study_request("I have 20 minutes") is True
     assert looks_like_new_study_request("y") is False
     assert looks_like_new_study_request("etymology") is False
+
+
+def test_activity_command_day_range() -> None:
+    assert parse_activity_days("/activity") == 28
+    assert parse_activity_days("/activity 7") == 7
+    with pytest.raises(ValueError):
+        parse_activity_days("/activity 0")
+    with pytest.raises(ValueError):
+        parse_activity_days("/activity recent")
 
 
 def test_smoke_test_succeeds_without_model_api() -> None:

@@ -2,6 +2,20 @@
 
 **LexiPilot - A Private Adaptive Vocabulary Learning Agent** is a self-hosted learning agent that analyzes vocabulary history, plans personalized study sessions, invokes learner-memory tools, adapts to mistakes, and generates targeted academic vocabulary practice with a model served from a dedicated AMD Radeon Cloud GPU instance.
 
+## AMD Radeon Hackathon 2026 Submission
+
+- **Track:** Track 2 - Development & Local Deployment of Private AI Agents
+- **Participant / Team:** `<PARTICIPANT_OR_TEAM_NAME>`
+- [Submission Index](submission/README.md)
+- [Project Specification](submission/LexiPilot_Project_Specification.pdf)
+- [Presentation](submission/LexiPilot_Presentation.pdf)
+- [Demo Video](submission/video/VIDEO_LINK.md)
+- [Agent Architecture](submission/architecture/lexipilot_architecture.svg)
+- [Radeon Evidence](submission/evidence/evidence_manifest.md)
+- [Reproduction Guide](#quickstart)
+- [Benchmark Results](docs/benchmark_results/thinking_benchmark.md)
+- [Final Submission Checklist](submission/FINAL_SUBMISSION_CHECKLIST.md)
+
 ## Problem
 
 Vocabulary learners often have word lists, review history, and missed-word logs, but still need to manually decide what to study next. Static review flows also struggle to adapt when the learner has only a few minutes or repeatedly misses the same words.
@@ -19,7 +33,7 @@ LexiPilot keeps the existing `vocab_trainer.py` vocabulary engine and adds a hyb
 A fresh clone can run with the committed sample vocabulary data and a generated synthetic profile. The private source PDF and real learner history are not required.
 
 ```bash
-git clone git@github.com:appleboycat/LexiPilot.git
+git clone https://github.com/appleboycat/LexiPilot.git
 cd LexiPilot
 
 python3 -m venv .venv
@@ -140,6 +154,19 @@ python3 lexipilot.py --no-color
 NO_COLOR=1 python3 lexipilot.py
 FORCE_COLOR=1 python3 lexipilot.py
 ```
+
+Safe profile views:
+
+```text
+/status
+/activity
+/activity 7
+/activity 90
+```
+
+`/activity` renders a framed, color-depth study-intensity heatmap from
+aggregated daily statistics. It does not print individual words or the complete
+profile.
 
 ## Architecture
 
@@ -264,8 +291,24 @@ Source report: [docs/benchmark_results/thinking_benchmark.md](docs/benchmark_res
 
 ## Installation
 
+Requirements:
+
+- Python 3.10 or newer (validated with Python 3.12)
+- `pip` and `venv`
+- network access only for endpoint-backed planning, practice generation, and
+  interactive etymology
+- optional Radeon deployment tools: ROCm, vLLM, and a compatible AMD Radeon GPU
+
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 python3 -m pip install -r requirements.txt
+```
+
+Optional submission-document rebuild dependencies:
+
+```bash
+python3 -m pip install -r requirements-docs.txt
 ```
 
 ## Configuration
@@ -326,6 +369,16 @@ FORCE_COLOR=1 python3 lexipilot.py \
   --demo \
   --env-file .env \
   --debug
+```
+
+Run the sample-data deterministic offline path without an API key:
+
+```bash
+python3 scripts/setup_demo_data.py
+python3 lexipilot.py \
+  --demo \
+  --deterministic \
+  --no-color
 ```
 
 The debug timeline distinguishes model and controller responsibility:
@@ -416,6 +469,59 @@ python3 scripts/smoke_lexipilot.py
 python3 scripts/smoke_fresh_clone.py
 python3 scripts/validate_vocab_index.py examples/sample_vocab_index.json
 ```
+
+Reproduce the report-generation pipeline without a model:
+
+```bash
+python3 scripts/benchmark_thinking.py \
+  --mock \
+  --warmups 1 \
+  --runs 5
+```
+
+## Troubleshooting
+
+### Model planning falls back
+
+Run:
+
+```bash
+python3 scripts/test_radeon_endpoint.py --env-file .env
+```
+
+Confirm the model name, endpoint readiness, and vLLM startup flags
+`--enable-auto-tool-choice --tool-call-parser hermes`. LexiPilot intentionally
+falls back when Tool Calling, JSON, or plan validation fails.
+
+### Base URL errors
+
+Set `RADEON_BASE_URL` to the OpenAI-compatible server root ending in `/v1`.
+LexiPilot normalizes the path and avoids `/v1/v1`. The CLI never prints the
+private URL.
+
+### Missing demo profile
+
+Run:
+
+```bash
+python3 scripts/setup_demo_data.py --force
+```
+
+### Terminal color or symbol problems
+
+Use:
+
+```bash
+NO_COLOR=1 python3 lexipilot.py --demo --deterministic
+```
+
+Status progress bars use ASCII characters. Activity levels retain distinct
+ASCII markers when color is disabled.
+
+### No private PDF or complete index
+
+Use `--demo`. The public sample index and synthetic profile are sufficient for
+tests and the evaluator workflow.
 
 ## Limitations
 

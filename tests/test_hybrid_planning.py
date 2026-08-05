@@ -104,6 +104,70 @@ class ProseOnlyClient:
         }
 
 
+class PartialPlanningClient:
+    """Model first selects summary/new, then follows a missing-tool nudge."""
+
+    def __init__(self, *, repeat_partial: bool = False) -> None:
+        self.calls = 0
+        self.repeat_partial = repeat_partial
+        self.messages: list[dict[str, Any]] = []
+        self.requests: list[list[dict[str, Any]]] = []
+
+    def chat(
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        response_format: dict[str, Any] | None = None,
+        max_tokens: int = 700,
+        tool_choice: str = "auto",
+    ) -> dict[str, Any]:
+        self.calls += 1
+        self.messages = messages
+        self.requests.append(list(messages))
+        if response_format is not None:
+            payload = {
+                "minutes": 15,
+                "review_words": ["granular", "redeem"],
+                "new_words": ["impetus"],
+                "priority_words": ["granular"],
+                "selection_reason": "Due and frequently missed words precede one new word.",
+            }
+            return {"choices": [{"message": {"role": "assistant", "content": json.dumps(payload)}}]}
+
+        if self.calls == 1 or self.repeat_partial:
+            requested = [
+                ("summary", "get_profile_summary", {"profile": "alice"}),
+                ("new", "get_new_words", {"profile": "alice", "limit": 10, "from_page": None}),
+            ]
+        else:
+            requested = [
+                ("due", "get_due_words", {"profile": "alice", "limit": 10}),
+                (
+                    "missed",
+                    "get_missed_words",
+                    {"profile": "alice", "limit": 10, "date": None, "highest_first": True},
+                ),
+            ]
+        return {
+            "choices": [
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": "",
+                        "tool_calls": [
+                            {
+                                "id": call_id,
+                                "type": "function",
+                                "function": {"name": name, "arguments": json.dumps(arguments)},
+                            }
+                            for call_id, name, arguments in requested
+                        ],
+                    }
+                }
+            ]
+        }
+
+
 def dedicated_runtime() -> LexiPilotRuntime:
     return LexiPilotRuntime(
         model_name="Qwen/Qwen3-8B",
@@ -185,6 +249,42 @@ def test_model_selected_read_only_tools_are_executed(toolbox: LexiPilotToolbox) 
     assert {"get_profile_summary", "get_due_words", "get_missed_words", "get_new_words"} <= names
     assert "record_answer" not in names
     assert "save_session_summary" not in names
+
+
+def test_partial_tool_selection_is_nudged_only_for_missing_tools(
+    toolbox: LexiPilotToolbox,
+) -> None:
+    toolbox.runtime = dedicated_runtime()
+    client = PartialPlanningClient()
+    plan = build_model_session_plan(
+        toolbox,
+        "alice",
+        "give me 10 words",
+        client=client,
+    )
+    assert client.calls == 3
+    assert plan["planning_mode"] == "model"
+    assert "Call only these missing structured tools now: get_due_words, get_missed_words." in str(
+        client.requests[1]
+    )
+    event_names = [event["name"] for event in toolbox.tool_events]
+    for name in ("get_profile_summary", "get_new_words", "get_due_words", "get_missed_words"):
+        assert event_names.count(name) == 1
+
+
+def test_repeated_partial_tool_selection_fails_after_targeted_nudge(
+    toolbox: LexiPilotToolbox,
+) -> None:
+    toolbox.runtime = dedicated_runtime()
+    client = PartialPlanningClient(repeat_partial=True)
+    with pytest.raises(ModelPlanningError, match="repeated tools without inspecting required tools"):
+        build_model_session_plan(
+            toolbox,
+            "alice",
+            "give me 10 words",
+            client=client,
+        )
+    assert client.calls == 2
 
 
 def test_structured_model_plan_creates_interactive_session(toolbox: LexiPilotToolbox) -> None:

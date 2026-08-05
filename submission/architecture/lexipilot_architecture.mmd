@@ -1,0 +1,43 @@
+%%{init: {"theme":"base","flowchart":{"htmlLabels":false,"curve":"linear"},"themeVariables":{"primaryColor":"#F7F8FA","primaryTextColor":"#20252B","primaryBorderColor":"#4B5563","lineColor":"#59636E","secondaryColor":"#EEF8FB","tertiaryColor":"#FFF4F2","clusterBkg":"#FFFFFF","clusterBorder":"#9AA4AE","fontFamily":"Arial"}}}%%
+flowchart LR
+    GOAL[Natural-language Goal] --> CLI[LexiPilot CLI]
+
+    subgraph LOCAL[User-controlled LexiPilot Environment]
+        CLI
+        TOOLS[Read-only Learner-State Tools]
+        INDEX[(Vocabulary Index)]
+        PROFILE[(Learner Profile)]
+        VALIDATOR[Structured Plan Validator]
+        FALLBACK[Deterministic Fallback]
+        CONTROLLER[Deterministic Session Controller]
+        PRACTICE[Targeted Bilingual Practice]
+        REPORTS[(Privacy-safe Reports)]
+    end
+
+    subgraph RADEON[Dedicated AMD Radeon Inference Boundary]
+        PLANNER[Qwen3-8B Planner<br/>vLLM and ROCm]
+        GENERATOR[Qwen3-8B Practice Generator<br/>vLLM and ROCm]
+    end
+
+    CLI -->|minimum goal context| PLANNER
+    PLANNER -->|model-selected calls| TOOLS
+    TOOLS --> INDEX
+    TOOLS --> PROFILE
+    TOOLS -->|compact evidence| PLANNER
+    PLANNER -->|strict JSON plan| VALIDATOR
+    VALIDATOR -->|validated plan| CONTROLLER
+    VALIDATOR -. invalid plan or endpoint failure .-> FALLBACK
+    FALLBACK --> CONTROLLER
+    CONTROLLER -->|explicit answers only| PROFILE
+    CONTROLLER -->|priority words and minimum context| GENERATOR
+    GENERATOR -->|structured English and Chinese| PRACTICE
+    CONTROLLER --> REPORTS
+
+    classDef model fill:#FFF0ED,stroke:#D52B1E,stroke-width:2px,color:#57130D;
+    classDef trust fill:#EAF7FA,stroke:#147D95,stroke-width:2px,color:#12343B;
+    classDef control fill:#EFF7EF,stroke:#3B7D48,stroke-width:2px,color:#173A1E;
+    classDef data fill:#F5F1FA,stroke:#7353A6,stroke-width:1.5px,color:#332447;
+    class PLANNER,GENERATOR model;
+    class TOOLS,VALIDATOR trust;
+    class FALLBACK,CONTROLLER,PRACTICE control;
+    class INDEX,PROFILE,REPORTS data;

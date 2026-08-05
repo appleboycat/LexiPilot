@@ -9,13 +9,20 @@ import sys
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from console_theme import should_enable_color
+from console_theme import should_enable_color, strip_ansi
 
 
 LEVEL_CHARS = ["  ", "..", "::", "++", "##"]
-LEVEL_COLORS = ["2", "32", "92", "1;32", "42;30"]
+LEVEL_COLORS = [
+    "48;5;236;37",
+    "48;5;22;97",
+    "48;5;28;97",
+    "48;5;34;30",
+    "48;5;40;30",
+]
 
 
 @dataclass(frozen=True)
@@ -73,6 +80,27 @@ def generate_random_activity(days: int, seed: int, today: date | None = None) ->
     return data
 
 
+def activity_from_daily_stats(
+    daily_stats: dict[str, Any],
+    days: int = 28,
+    *,
+    today: date | None = None,
+) -> list[DayActivity]:
+    end = today or date.today()
+    count = max(1, min(365, int(days)))
+    start = end - timedelta(days=count - 1)
+    data: list[DayActivity] = []
+    for offset in range(count):
+        day = start + timedelta(days=offset)
+        raw = daily_stats.get(day.isoformat(), {})
+        stats = raw if isinstance(raw, dict) else {}
+        words = max(0, int(stats.get("studied", 0) or 0))
+        missed = max(0, int(stats.get("missed", 0) or 0))
+        remembered = max(0, int(stats.get("remembered", max(0, words - missed)) or 0))
+        data.append(DayActivity(day, words, remembered, missed))
+    return data
+
+
 def month_labels(weeks: list[list[DayActivity | None]]) -> str:
     labels = ["   "]
     previous = None
@@ -101,11 +129,15 @@ def week_grid(data: list[DayActivity]) -> list[list[DayActivity | None]]:
     return [cells[index : index + 7] for index in range(0, len(cells), 7)]
 
 
-def render_heatmap(data: list[DayActivity], *, no_color: bool = False) -> str:
+def render_heatmap(
+    data: list[DayActivity],
+    *,
+    no_color: bool = False,
+    source: str = "deterministic random demo data",
+) -> str:
     enabled = color_enabled(no_color)
     weeks = week_grid(data)
-    lines = [style("LexiPilot Study Intensity", "1", enabled)]
-    lines.append(month_labels(weeks))
+    heatmap_lines = [month_labels(weeks)]
     day_names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
     for row in range(7):
         cells = []
@@ -117,18 +149,64 @@ def render_heatmap(data: list[DayActivity], *, no_color: bool = False) -> str:
                 level = activity.intensity
                 cells.append(style(LEVEL_CHARS[level], LEVEL_COLORS[level], enabled))
         label = day_names[row] if row in {1, 3, 5} else "   "
-        lines.append(f"{label} " + " ".join(cells).rstrip())
+        heatmap_lines.append(f"{label} " + " ".join(cells).rstrip())
 
     total_words = sum(item.words for item in data)
     active_days = sum(1 for item in data if item.words > 0)
     missed = sum(item.missed for item in data)
     best = max(data, key=lambda item: item.words) if data else None
-    lines.append("")
-    lines.append("Legend: none='  ' light='..' medium='::' strong='++' intense='##'")
-    lines.append(f"Days: {len(data)} | Active days: {active_days} | Words reviewed: {total_words} | Missed: {missed}")
+    heatmap_lines.append("")
+    heatmap_lines.append(f"Days: {len(data)}")
+    heatmap_lines.append(f"Active days: {active_days}")
+    heatmap_lines.append(f"Words reviewed: {total_words}")
+    heatmap_lines.append(f"Missed: {missed}")
     if best:
-        lines.append(f"Peak day: {best.day.isoformat()} ({best.words} words)")
-    lines.append("Source: deterministic random demo data")
+        heatmap_lines.append(f"Peak day: {best.day.isoformat()} ({best.words} words)")
+    heatmap_lines.append(f"Source: {source}")
+
+    legend_lines = [
+        "Level    Mark  Words",
+        "None     [  ]  0",
+        f"Light    [{style('..', LEVEL_COLORS[1], enabled)}]  1-4",
+        f"Medium   [{style('::', LEVEL_COLORS[2], enabled)}]  5-11",
+        f"Strong   [{style('++', LEVEL_COLORS[3], enabled)}]  12-24",
+        f"Intense  [{style('##', LEVEL_COLORS[4], enabled)}]  25+",
+    ]
+    return render_activity_panel(heatmap_lines, legend_lines)
+
+
+def _visible_width(text: str) -> int:
+    return len(strip_ansi(text))
+
+
+def _visible_ljust(text: str, width: int) -> str:
+    return text + " " * max(0, width - _visible_width(text))
+
+
+def _titled_border(label: str, width: int) -> str:
+    title = f"─ {label} "
+    return title + "─" * max(0, width - len(title))
+
+
+def render_activity_panel(left_lines: list[str], right_lines: list[str]) -> str:
+    left_width = max(34, *(_visible_width(line) for line in left_lines))
+    right_width = max(24, *(_visible_width(line) for line in right_lines))
+    height = max(len(left_lines), len(right_lines))
+    lines = [
+        "╭"
+        + _titled_border("LexiPilot Study Activity", left_width + 2)
+        + "┬"
+        + _titled_border("Intensity Legend", right_width + 2)
+        + "╮"
+    ]
+    for index in range(height):
+        left = left_lines[index] if index < len(left_lines) else ""
+        right = right_lines[index] if index < len(right_lines) else ""
+        lines.append(
+            f"│ {_visible_ljust(left, left_width)} │ "
+            f"{_visible_ljust(right, right_width)} │"
+        )
+    lines.append("╰" + "─" * (left_width + 2) + "┴" + "─" * (right_width + 2) + "╯")
     return "\n".join(lines)
 
 

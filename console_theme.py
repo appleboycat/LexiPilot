@@ -127,10 +127,10 @@ def highlight_english_terms(text: str, target_words: list[str], theme: ConsoleTh
 
 def highlight_chinese_terms(text: str, target_translations: dict[str, list[str]], theme: ConsoleTheme) -> str:
     phrases = sorted({p for values in target_translations.values() for p in values if p}, key=len, reverse=True)
-    result = text
-    for phrase in phrases:
-        result = result.replace(phrase, theme.chinese_target(phrase))
-    return result
+    if not phrases:
+        return text
+    pattern = re.compile("|".join(re.escape(phrase) for phrase in phrases))
+    return pattern.sub(lambda match: theme.chinese_target(match.group(0)), text)
 
 
 class Console:
@@ -185,18 +185,20 @@ class Console:
     def profile_status(self, summary: dict[str, object], runtime_summary: dict[str, str] | None = None) -> None:
         total = int(summary.get("total_vocabulary_count", 0) or 0)
         started = int(summary.get("started_word_count", 0) or 0)
-        progress_ratio = (started / total) if total > 0 else 0.0
+        position = int(summary.get("current_new_word_position", 0) or 0)
         progress_width = 20
-        filled = max(0, min(progress_width, int(round(progress_ratio * progress_width))))
-        bar = "█" * filled + "░" * (progress_width - filled)
-        percent = progress_ratio * 100 if total else 0.0
+
+        started_ratio = (started / total) if total > 0 else 0.0
+        filled = max(0, min(progress_width, int(round(started_ratio * progress_width))))
+        progress_bar = "█" * filled + "░" * (progress_width - filled)
+
         rows = [
             ("Profile", str(summary.get("profile", ""))),
             ("Started words", f"{started} / {total}"),
-            ("Progress", f"[{bar}] {percent:.1f}%"),
+            ("Learning coverage", f"[{progress_bar}] {started_ratio * 100:.1f}%"),
+            ("Vocabulary position", f"{position} / {total}"),
             ("Due today", str(summary.get("reviews_due_today", 0))),
             ("Historical misses", str(summary.get("total_incorrect_answers", 0))),
-            ("Current position", str(summary.get("current_new_word_position", 0))),
             ("Recent activity", f"{len(summary.get('recent_study_statistics', {}) or {})} days"),
         ]
         if runtime_summary:

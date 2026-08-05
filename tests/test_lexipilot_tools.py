@@ -7,7 +7,12 @@ from pathlib import Path
 import pytest
 
 from lexipilot_core import request_payload_for_test
-from lexipilot_tools import LexiPilotRuntime, LexiPilotToolbox, local_academic_practice
+from lexipilot_tools import (
+    LexiPilotRuntime,
+    LexiPilotToolbox,
+    local_academic_practice,
+    parse_radeon_story_payload,
+)
 
 
 def sample_entries() -> list[dict[str, object]]:
@@ -198,3 +203,44 @@ def test_local_academic_fallback_uses_unknown_words_in_real_context() -> None:
     assert "不满开始发酵" in chinese
     assert "肥沃的公共庭院" in chinese
     assert "孤立词义背诵" not in chinese
+
+
+def test_radeon_story_uses_exact_chinese_target_mappings() -> None:
+    entries = [
+        {"word": "farce", "definition": "n. 笑剧；闹剧"},
+        {"word": "faucet", "definition": "n. 旋塞；插口"},
+        {"word": "falter", "definition": "vi. 蹒跚地走；支吾"},
+    ]
+    payload = json.dumps(
+        {
+            "english": "The farce made observers falter while a faucet leaked.",
+            "chinese": "这场闹剧让观察者开始分心，而水龙头仍在漏水。",
+            "target_translations": {
+                "farce": ["闹剧"],
+                "faucet": ["水龙头"],
+                "falter": ["分心"],
+            },
+            "notes": [],
+        },
+        ensure_ascii=False,
+    )
+    parsed = parse_radeon_story_payload(payload, entries)
+    assert parsed is not None
+    assert parsed["target_translations"] == {
+        "farce": ["闹剧"],
+        "faucet": ["水龙头"],
+        "falter": ["分心"],
+    }
+
+
+def test_radeon_story_rejects_missing_or_nonmatching_target_mapping() -> None:
+    entries = [{"word": "faucet", "definition": "n. 旋塞；插口"}]
+    payload = json.dumps(
+        {
+            "english": "A faucet leaked.",
+            "chinese": "水龙头漏水了。",
+            "target_translations": {"faucet": ["旋塞"]},
+        },
+        ensure_ascii=False,
+    )
+    assert parse_radeon_story_payload(payload, entries) is None

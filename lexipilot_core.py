@@ -569,15 +569,35 @@ def build_model_session_plan(
             "role": "user",
             "content": (
                 f"Profile: {profile}\nLearning objective: {goal}\n"
-                "Call the required read-only tools now. Return no prose."
+                "Call get_profile_summary, get_due_words, and get_missed_words now. "
+                "Also call get_new_words when new vocabulary may be selected. Return no prose."
             ),
         },
     ]
     tools = planning_tool_schemas()
     evidence = PlanningEvidence()
-    tool_nudge_sent = False
+    required_tools = {"get_profile_summary", "get_due_words", "get_missed_words"}
+    missing_tool_nudges: set[tuple[str, ...]] = set()
     new_word_nudge_sent = False
     candidate_limit = min(12, estimate_word_count(goal, estimate_minutes(goal)) + 3)
+
+    def request_missing_tools(missing: set[str]) -> None:
+        signature = tuple(sorted(missing))
+        if signature in missing_tool_nudges:
+            names = ", ".join(signature)
+            raise ModelPlanningError(f"model repeated tools without inspecting required tools: {names}")
+        missing_tool_nudges.add(signature)
+        completed = sorted(set(evidence.successful_tools))
+        messages.append(
+            {
+                "role": "user",
+                "content": (
+                    f"Call only these missing structured tools now: {', '.join(signature)}. "
+                    f"Do not repeat completed tools: {', '.join(completed) or 'none'}. "
+                    "Return no prose."
+                ),
+            }
+        )
 
     def finish_with_json_plan() -> dict[str, Any]:
         allowed_review_words = [
@@ -642,20 +662,9 @@ def build_model_session_plan(
         messages.append(message)
         tool_calls = message.get("tool_calls") or []
         if not tool_calls:
-            required_tools = {"get_profile_summary", "get_due_words", "get_missed_words"}
-            if not required_tools.issubset(evidence.successful_tools):
-                if tool_nudge_sent:
-                    raise ModelPlanningError("model returned prose instead of required structured tool calls")
-                tool_nudge_sent = True
-                messages.append(
-                    {
-                        "role": "user",
-                        "content": (
-                            "Use the provided structured tools now. Call get_profile_summary, get_due_words, "
-                            "and get_missed_words for the stated profile. Do not describe or imitate tool calls in prose."
-                        ),
-                    }
-                )
+            missing_tools = required_tools - set(evidence.successful_tools)
+            if missing_tools:
+                request_missing_tools(missing_tools)
                 continue
             explicitly_requests_new = bool(
                 re.search(r"\bnew\s+(?:vocabulary\s+)?words?\b|新词|新单词", goal, re.IGNORECASE)
@@ -732,26 +741,28 @@ def build_model_session_plan(
                 }
             )
 
-        required_tools = {"get_profile_summary", "get_due_words", "get_missed_words"}
+        missing_tools = required_tools - set(evidence.successful_tools)
+        if missing_tools:
+            request_missing_tools(missing_tools)
+            continue
         explicitly_requests_new = bool(
             re.search(r"\bnew\s+(?:vocabulary\s+)?words?\b|新词|新单词", goal, re.IGNORECASE)
         )
-        if required_tools.issubset(evidence.successful_tools):
-            if explicitly_requests_new and "get_new_words" not in evidence.successful_tools:
-                if new_word_nudge_sent:
-                    raise ModelPlanningError("model did not inspect new words requested by the learner")
-                new_word_nudge_sent = True
-                messages.append(
-                    {
-                        "role": "user",
-                        "content": (
-                            "The learning goal requests a new word. Call get_new_words for the stated profile "
-                            "before producing the plan."
-                        ),
-                    }
-                )
-                continue
-            return finish_with_json_plan()
+        if explicitly_requests_new and "get_new_words" not in evidence.successful_tools:
+            if new_word_nudge_sent:
+                raise ModelPlanningError("model did not inspect new words requested by the learner")
+            new_word_nudge_sent = True
+            messages.append(
+                {
+                    "role": "user",
+                    "content": (
+                        "The learning goal requests a new word. Call get_new_words for the stated profile "
+                        "before producing the plan."
+                    ),
+                }
+            )
+            continue
+        return finish_with_json_plan()
 
     raise ModelPlanningError("model did not return a final plan within the tool-round limit")
 

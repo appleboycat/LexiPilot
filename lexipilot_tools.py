@@ -146,6 +146,66 @@ def chinese_phrases_for_entry(entry: dict[str, Any]) -> list[str]:
     return phrases[:4]
 
 
+def parse_radeon_story_payload(
+    text: str,
+    entries: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    """Validate model prose and exact Chinese phrases without retaining reasoning."""
+    cleaned = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL | re.IGNORECASE).strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+    try:
+        parsed = json.loads(cleaned)
+    except json.JSONDecodeError:
+        match = re.search(r"\{.*\}", cleaned, flags=re.DOTALL)
+        if not match:
+            return None
+        try:
+            parsed = json.loads(match.group(0))
+        except json.JSONDecodeError:
+            return None
+    if not isinstance(parsed, dict):
+        return None
+
+    english = vt.clean_spaces(str(parsed.get("english", "")))
+    chinese = vt.clean_spaces(str(parsed.get("chinese", "")))
+    raw_mappings = parsed.get("target_translations")
+    if not english or not chinese or not isinstance(raw_mappings, dict):
+        return None
+    mappings_by_word = {
+        str(word).strip().lower(): values
+        for word, values in raw_mappings.items()
+        if str(word).strip()
+    }
+    target_translations: dict[str, list[str]] = {}
+    for entry in entries:
+        word = str(entry.get("word", "")).strip()
+        values = mappings_by_word.get(word.lower())
+        if isinstance(values, str):
+            values = [values]
+        if not isinstance(values, list):
+            return None
+        phrases: list[str] = []
+        for value in values:
+            phrase = vt.clean_spaces(str(value)).strip()
+            if (
+                len(phrase) >= 2
+                and "\x1b" not in phrase
+                and phrase in chinese
+                and phrase not in phrases
+            ):
+                phrases.append(phrase)
+        if not phrases:
+            return None
+        target_translations[word] = phrases
+    return {
+        "english": english,
+        "chinese": chinese,
+        "target_translations": target_translations,
+    }
+
+
 def _entry_pos(entry: dict[str, Any]) -> str:
     definition = str(entry.get("definition") or entry.get("source_text") or "")
     match = re.search(r"\b(adj|adv|vt|vi|v|n)\.", definition)
@@ -343,12 +403,12 @@ class LexiPilotToolbox:
 
     def _run(self, name: str, func: Callable[[], Any]) -> Any:
         start = time.perf_counter()
+        ok = False
         try:
             result = func()
             ok = True
             return result
-        except Exception as exc:
-            ok = False
+        except Exception:
             raise
         finally:
             self.tool_events.append({"name": name, "duration": round(time.perf_counter() - start, 4), "ok": ok})
@@ -541,7 +601,11 @@ class LexiPilotToolbox:
         words = [{"word": e["word"], "definition": vt.plain_definition(e.get("definition") or "")} for e in entries]
         prompt = (
             f"Write a short {style} vocabulary passage using every target word exactly once or more. "
-            "Return strict JSON with keys english, chinese, notes. Notes must be an array of short strings. "
+            "Return strict JSON with keys english, chinese, target_translations, notes. "
+            "target_translations must map every target word to an array containing every complete Chinese phrase "
+            "that translates its use in chinese. Copy each phrase verbatim from chinese, use at least two Chinese "
+            "characters per phrase, and include distinct phrases when a target is translated more than once. "
+            "Notes must be an array of short strings. "
             f"Chinese translation required: {include_translation}.\nTargets:\n{json.dumps(words, ensure_ascii=False)}"
         )
         payload: dict[str, Any] = {
@@ -550,7 +614,7 @@ class LexiPilotToolbox:
                 {"role": "system", "content": "You create concise academic vocabulary practice material. Return JSON only."},
                 {"role": "user", "content": prompt},
             ],
-            "temperature": 0.2,
+            "temperature": 0,
             "max_tokens": 1600,
             "response_format": {"type": "json_object"},
         }
@@ -576,11 +640,16 @@ class LexiPilotToolbox:
         if isinstance(usage, dict):
             self.runtime.prompt_tokens += int(usage.get("prompt_tokens", 0) or 0)
             self.runtime.completion_tokens += int(usage.get("completion_tokens", 0) or 0)
-        parsed = vt.parse_snap_json(vt.response_text(data))
+        parsed = parse_radeon_story_payload(vt.response_text(data), entries)
         if not parsed:
             return None
         self.runtime.radeon_story_succeeded = True
-        return {"english": parsed["english"], "chinese": parsed["chinese"], "notes": []}
+        return {
+            "english": parsed["english"],
+            "chinese": parsed["chinese"],
+            "target_translations": parsed["target_translations"],
+            "notes": [],
+        }
 
     def generate_practice_story(
         self,
@@ -616,9 +685,21 @@ class LexiPilotToolbox:
                 str(entry["word"]): int(state.get("cards", {}).get(str(entry["seq"]), {}).get("stage", 0))
                 for entry in entries
             }
-            target_translations = {
+            fallback_target_translations = {
                 str(entry["word"]): chinese_phrases_for_entry(entry) for entry in entries
             }
+            generated_target_translations = generated.get("target_translations")
+            target_translations = (
+                {
+                    str(entry["word"]): [
+                        str(phrase)
+                        for phrase in generated_target_translations.get(str(entry["word"]), [])
+                    ]
+                    for entry in entries
+                }
+                if isinstance(generated_target_translations, dict)
+                else fallback_target_translations
+            )
             material = {
                 "profile": vt.normalize_profile_name(profile),
                 "created_at": _iso_now(),
