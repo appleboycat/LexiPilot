@@ -162,6 +162,62 @@ def _join_words(words: list[str]) -> str:
     return ", ".join(words[:-1]) + f", and {words[-1]}"
 
 
+FALLBACK_ENGLISH_SENTENCES = {
+    "farce": "A student newspaper first treated the delayed repair as a farce, but the researchers looked for evidence instead of ridicule.",
+    "far-fetched": "They rejected a far-fetched rumor that the entire study had been invented to embarrass the administration.",
+    "fatigue": "Survey data showed that fatigue rose sharply among students who had slept poorly for several nights.",
+    "faucet": "A leaking faucet in the residence hall gave the team a concrete example of how small maintenance failures can affect daily life.",
+    "feedback": "Residents' feedback helped the team separate personal complaints from patterns that appeared across the whole building.",
+    "flake": "A flake of old paint near the sink supported the claim that the room had been neglected for a long time.",
+    "expropriate": "When one proposal tried to expropriate a shared storage room for private offices, students objected at the hearing.",
+    "forfeit": "The dean warned that the university would forfeit public trust if it ignored the evidence.",
+    "frenzy": "Careful reporting prevented the meeting from turning into a frenzy.",
+    "exotic": "The committee avoided exotic explanations and focused on ordinary causes that the data could support.",
+    "flair": "One student with a flair for visual design turned the findings into a clear public poster.",
+    "extol": "The final report did not simply extol the research team; it explained how the evidence had changed campus policy.",
+    "faculty": "Faculty members reviewed the evidence before the recommendations were sent to the dean.",
+}
+
+
+FALLBACK_CHINESE_SENTENCES = {
+    "farce": "学生报纸起初把维修拖延写成一场笑剧，但研究者选择依据证据分析，而不是嘲笑。",
+    "far-fetched": "他们排除了一个牵强的传言：整项研究是为了让校方难堪而编造的。",
+    "fatigue": "调查数据显示，连续几晚睡眠不好后，学生的疲劳感明显上升。",
+    "faucet": "宿舍里漏水的旋塞给团队提供了一个具体例子，说明小的维修问题也会影响日常生活。",
+    "feedback": "住户的反馈帮助团队区分个人抱怨和整栋楼反复出现的共同问题。",
+    "flake": "水槽旁一小片剥落的旧漆支持了房间长期缺乏维护的判断。",
+    "expropriate": "当一项方案试图征用公共储物间改成私人办公室时，学生在听证会上提出反对。",
+    "forfeit": "院长警告说，如果学校无视证据，就会丧失公众信任。",
+    "frenzy": "谨慎的报告避免了会议变成一场狂乱的争吵。",
+    "exotic": "委员会没有采用异国情调式的离奇解释，而是关注数据能够支持的普通原因。",
+    "flair": "一名有设计天分的学生把研究结果做成了清晰的公共海报。",
+    "extol": "最终报告并不是单纯颂扬研究团队，而是解释证据如何改变了校园政策。",
+    "faculty": "教师成员在建议提交给院长前审阅了证据。",
+}
+
+
+def _fallback_sentence(entry: dict[str, Any]) -> str:
+    word = str(entry["word"])
+    known = FALLBACK_ENGLISH_SENTENCES.get(word.lower())
+    if known:
+        return known
+    pos = _entry_pos(entry)
+    if pos == "adj":
+        return f"The team used {word} to describe a pattern that changed how readers interpreted the evidence."
+    if pos in {"v", "vt", "vi"}:
+        return f"The report used {word} in a precise context so the claim would not sound like a memorized definition."
+    return f"The report connected {word} to a specific observation, giving the term a practical role in the study."
+
+
+def _fallback_chinese_sentence(entry: dict[str, Any]) -> str:
+    word = str(entry["word"])
+    known = FALLBACK_CHINESE_SENTENCES.get(word.lower())
+    if known:
+        return known
+    phrases = "、".join(chinese_phrases_for_entry(entry)[:2]) or vt.short_meaning(entry)
+    return f"报告把 {word} 和“{phrases}”放进具体观察中，而不是只把它当作孤立词义背诵。"
+
+
 def local_academic_practice(entries: list[dict[str, Any]]) -> dict[str, str]:
     words = [str(entry["word"]) for entry in entries]
     lower_set = {word.lower() for word in words}
@@ -181,38 +237,15 @@ def local_academic_practice(entries: list[dict[str, Any]]) -> dict[str, str]:
             ),
         }
 
-    clauses: list[str] = []
-    for index, entry in enumerate(entries):
-        word = str(entry["word"])
-        pos = _entry_pos(entry)
-        if pos == "adj":
-            clause = f"a {word} pattern changed the evidence"
-        elif pos in {"v", "vt", "vi"}:
-            clause = f"the team had to {word} a flawed assumption"
-        elif pos == "adv":
-            clause = f"the researchers responded {word} during the review"
-        else:
-            clause = f"{word} became a key factor in the case"
-        if index == 0:
-            clauses.append(clause)
-        elif index == len(entries) - 1:
-            clauses.append(f"and {clause}")
-        else:
-            clauses.append(clause)
     english = (
-        "In an academic field study, "
-        + "; ".join(clauses)
-        + ". By linking the terms to one investigation, the group made the vocabulary easier to remember."
+        "During a campus policy study, researchers examined how neglected facilities affected student life. "
+        + " ".join(_fallback_sentence(entry) for entry in entries)
+        + " By placing each term inside the same investigation, the practice passage turns vocabulary into a coherent scene."
     )
-
-    phrase_groups = []
-    for entry in entries:
-        phrases = chinese_phrases_for_entry(entry)
-        phrase_groups.append("、".join(phrases[:2]) if phrases else vt.short_meaning(entry))
     chinese = (
-        "在一次学术实地研究中，团队把"
-        + "，".join(phrase_groups)
-        + "放进同一个调查场景中理解。通过把这些词和同一项研究联系起来，复习材料比单纯列词更容易记住。"
+        "在一次校园政策研究中，研究者考察了被忽视的设施如何影响学生生活。"
+        + "".join(_fallback_chinese_sentence(entry) for entry in entries)
+        + "通过把每个词放进同一项调查，练习段落把词汇变成了连贯的场景。"
     )
     return {"english": english, "chinese": chinese}
 

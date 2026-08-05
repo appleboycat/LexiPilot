@@ -154,3 +154,27 @@ def test_local_academic_fallback_is_coherent_for_demo_words() -> None:
         assert word in english
     for phrase in ["减轻", "离弃", "使常规笔记简短", "脱离常轨", "痛恨", "持久"]:
         assert phrase in chinese
+
+
+def test_local_academic_fallback_avoids_key_factor_template() -> None:
+    entries = [
+        {"word": "fatigue", "definition": "n. 疲劳；疲乏"},
+        {"word": "faucet", "definition": "n. 旋塞；插口"},
+        {"word": "feedback", "definition": "n. 反馈；回复"},
+        {"word": "farce", "definition": "n. 笑剧；闹剧"},
+        {"word": "flake", "definition": "n. 薄片；小片"},
+        {"word": "expropriate", "definition": "vt. 没收；征用"},
+        {"word": "forfeit", "definition": "n. 罚金；没收物"},
+        {"word": "frenzy", "definition": "n. 狂怒；狂暴"},
+    ]
+    result = local_academic_practice(entries)
+    english = result["english"]
+    chinese = result["chinese"]
+    assert "became a key factor" not in english
+    assert "flawed assumption" not in english
+    assert "leaking faucet" in english
+    assert "feedback helped" in english
+    assert "expropriate a shared storage room" in english
+    assert "漏水的旋塞" in chinese
+    assert "住户的反馈" in chinese
+    assert "征用公共储物间" in chinese
