@@ -4,11 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 import time
 
 from console_theme import Console, ConsoleTheme
-from lexipilot_core import LexiPilotAgent, is_internal_control_only, run_tool_call_loop
+from lexipilot_core import LexiPilotAgent, SessionPhase, is_internal_control_only, run_tool_call_loop
 from lexipilot_tools import ConfigError, LexiPilotRuntime, LexiPilotToolbox, load_lexipilot_env
 from scripts.backup_default_profile import backup_default_profile
 
@@ -25,6 +26,32 @@ def print_banner(profile: str, runtime: LexiPilotRuntime, console: Console) -> N
 def print_response(text: str) -> None:
     if text and not is_internal_control_only(text):
         print(text)
+
+
+def print_profile_status(profile: str, toolbox: LexiPilotToolbox, console: Console, *, debug: bool = False) -> None:
+    if debug:
+        console.tool("get_profile_summary")
+    summary = toolbox.get_profile_summary(profile)
+    console.profile_status(summary)
+
+
+POST_COMPLETION_STUDY_INPUTS = {"y", "yes", "n", "no", "e", "etymology", "skip", "stop"}
+TERMINAL_PHASES = {SessionPhase.COMPLETED, SessionPhase.STOPPED, SessionPhase.FAILED}
+
+
+def should_start_new_request_after_completion(agent: LexiPilotAgent, text: str) -> bool:
+    if agent.session is None or agent.session.phase not in TERMINAL_PHASES:
+        return False
+    return text.strip().lower() not in POST_COMPLETION_STUDY_INPUTS
+
+
+def looks_like_new_study_request(text: str) -> bool:
+    lowered = text.strip().lower()
+    if lowered in POST_COMPLETION_STUDY_INPUTS or lowered.startswith("/"):
+        return False
+    if re.search(r"\b\d{1,3}\s*(?:words?|minutes?|mins?)\b", lowered):
+        return True
+    return any(phrase in lowered for phrase in ("give me", "review", "study", "focus on", "practice words"))
 
 
 def main() -> None:
@@ -54,6 +81,7 @@ def main() -> None:
             path = backup_default_profile()
             backed_up = True
             console.saved(f"Default profile backup: {path}")
+    print_profile_status(args.profile, toolbox, console, debug=args.debug)
 
     while True:
         try:
@@ -74,16 +102,13 @@ def main() -> None:
             print("Session reset.")
             continue
         if text == "/status":
-            if args.debug:
-                console.tool("get_profile_summary")
-            summary = toolbox.get_profile_summary(args.profile)
-            console.status(
-                f"Profile: {summary['profile']} | Started words: {summary['started_word_count']} | "
-                f"Due today: {summary['reviews_due_today']} | Historical misses: {summary['total_incorrect_answers']} | "
-                f"Current vocabulary position: {summary['current_new_word_position']} | "
-                f"Recent activity: {len(summary['recent_study_statistics'])} days"
-            )
+            print_profile_status(args.profile, toolbox, console, debug=args.debug)
             continue
+        if should_start_new_request_after_completion(agent, text):
+            agent.session = None
+        elif agent.session is not None and looks_like_new_study_request(text):
+            console.status("Starting a new study request.")
+            agent.session = None
         if args.model_loop and agent.session is None:
             try:
                 print_response(run_tool_call_loop(toolbox, args.profile, text, debug=args.debug))

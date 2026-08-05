@@ -4,7 +4,7 @@ import os
 import subprocess
 import sys
 
-from console_theme import ConsoleTheme, highlight_chinese_terms, highlight_english_terms, strip_ansi
+from console_theme import Console, ConsoleTheme, highlight_chinese_terms, highlight_english_terms, strip_ansi
 
 
 def test_color_enabled_semantic_output() -> None:
@@ -82,3 +82,33 @@ def test_no_color_cli_disables_ansi() -> None:
         check=True,
     )
     assert "\033[" not in result.stdout
+
+
+def test_tool_line_is_dim(capsys) -> None:
+    console = Console(ConsoleTheme(enabled=True))
+    console.tool("save_session_summary")
+    output = capsys.readouterr().out
+    assert output.startswith("\033[2m[TOOL] save_session_summary\033[0m")
+    assert strip_ansi(output).strip() == "[TOOL] save_session_summary"
+
+
+def test_profile_status_multiline_progress(capsys) -> None:
+    console = Console(ConsoleTheme(enabled=False))
+    console.profile_status(
+        {
+            "profile": "default",
+            "total_vocabulary_count": 2000,
+            "started_word_count": 500,
+            "reviews_due_today": 120,
+            "total_incorrect_answers": 42,
+            "current_new_word_position": 900,
+            "recent_study_statistics": {"2026-08-01": {}, "2026-08-02": {}},
+        }
+    )
+    output = capsys.readouterr().out
+    assert "[STATUS]\n" in output
+    assert "Profile: default" in output
+    assert "Started words: 500 / 2000" in output
+    assert "Progress: [#######---------------------] 25.0%" in output
+    assert "Due today: 120" in output
+    assert "Recent activity: 2 days" in output

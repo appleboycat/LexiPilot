@@ -131,7 +131,13 @@ Timing fields separate wall time from active processing:
 - `story_generation_seconds`: practice-generation duration.
 - `planning_seconds` and `finalization_seconds`: focused Agent workflow timings.
 
-Some timing fields overlap by design. For example, story generation includes model request time when the dedicated endpoint is used.
+Some timing fields overlap by design. Model request time is included in tool time when a tool invokes the model. Story generation time is a subset of tool time. Aggregate timing fields must not be summed.
+
+Use `non_overlapping_timing_breakdown` for top-level additive timing:
+
+- `user_interaction_wait_seconds`
+- `model_api_execution_seconds`
+- `local_non_model_processing_seconds`
 
 Inspect a safe summary:
 

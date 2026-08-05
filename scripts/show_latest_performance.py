@@ -23,11 +23,19 @@ def main() -> int:
     print(f"Completion tokens: {data.get('completion_tokens')}")
     print(f"Story generation duration: {data.get('story_generation_duration')}")
     print(f"Total duration: {data.get('total_task_duration')}")
+    print(f"Timing note: {data.get('timing_semantics')}")
     print(f"Session wall seconds: {data.get('session_wall_seconds')}")
     print(f"User interaction seconds: {data.get('user_interaction_wait_seconds')}")
     print(f"Active system seconds: {data.get('active_system_seconds')}")
-    print(f"Model request seconds: {data.get('model_request_seconds')}")
-    print(f"Tool execution seconds: {data.get('tool_execution_seconds')}")
+    breakdown = data.get("non_overlapping_timing_breakdown") or {}
+    print("Non-overlapping breakdown:")
+    print(f"  User interaction wait: {breakdown.get('user_interaction_wait_seconds')}")
+    print(f"  Model/API execution: {breakdown.get('model_api_execution_seconds')}")
+    print(f"  Local non-model processing: {breakdown.get('local_non_model_processing_seconds')}")
+    print("Overlapping detail timings:")
+    print(f"  Model request seconds: {data.get('model_request_seconds')}")
+    print(f"  Tool execution seconds: {data.get('tool_execution_seconds')}")
+    print(f"  Story generation seconds: {data.get('story_generation_seconds')}")
     print(f"Final state: {data.get('final_session_state')}")
     return 0
 

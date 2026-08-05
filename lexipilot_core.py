@@ -59,9 +59,16 @@ def estimate_minutes(goal: str, default: int = 15) -> int:
     return max(3, min(120, int(match.group(1))))
 
 
+def estimate_word_count(goal: str, minutes: int, default_max: int = 20) -> int:
+    match = re.search(r"(\d{1,3})\s*(?:words?|vocab(?:ulary)?\s+words?|单词|词)", goal, flags=re.IGNORECASE)
+    if match:
+        return max(1, min(default_max, int(match.group(1))))
+    return max(3, min(default_max, minutes // 2))
+
+
 def build_session_plan(toolbox: LexiPilotToolbox, profile: str, goal: str) -> dict[str, Any]:
     minutes = estimate_minutes(goal)
-    target_count = max(3, min(20, minutes // 2))
+    target_count = estimate_word_count(goal, minutes)
     summary = toolbox.get_profile_summary(profile)
     due = toolbox.get_due_words(profile, min(20, target_count + 5))["words"]
     missed = toolbox.get_missed_words(profile, min(20, target_count + 5), None, True)["words"]
@@ -107,6 +114,7 @@ def build_session_plan(toolbox: LexiPilotToolbox, profile: str, goal: str) -> di
         "profile": profile,
         "goal": goal,
         "available_minutes": minutes,
+        "requested_target_count": target_count,
         "target_count": len(plan_words),
         "summary": summary,
         "due_words": due,
@@ -118,15 +126,79 @@ def build_session_plan(toolbox: LexiPilotToolbox, profile: str, goal: str) -> di
     }
 
 
-def format_plan(plan: dict[str, Any]) -> str:
+def format_plan(plan: dict[str, Any], theme: ConsoleTheme | None = None) -> str:
     lines = [
         f"Plan for {plan['available_minutes']} minutes: review {len(plan['planned_words'])} words, prioritizing due reviews and missed words.",
         f"Profile has {plan['summary']['reviews_due_today']} due reviews and {plan['summary']['total_incorrect_answers']} recorded misses.",
     ]
-    for index, word in enumerate(plan["planned_words"], start=1):
-        lines.append(f"{index}. {word['word']} - {word.get('definition', '')} ({word['selection_reason']})")
-    lines.append("Answer each card with y, n, etymology, skip, or stop.")
+    lines.extend(render_plan_word_table(plan["planned_words"], theme))
+    lines.append("Answer each card with y, n, e=etymology, skip, or stop.")
     return "\n".join(lines)
+
+
+def render_definition(definition: str, theme: ConsoleTheme | None = None) -> str:
+    if theme is None:
+        return definition
+    rendered = vt.POS_SPLIT_RE.sub(lambda match: theme.pos(match.group(1)), definition)
+    return re.sub(r"[\u4e00-\u9fff]+", lambda match: theme.definition(match.group(0)), rendered)
+
+
+def split_pos_definition(definition: str) -> tuple[str, str]:
+    match = vt.POS_SPLIT_RE.match(definition.strip())
+    if not match:
+        return "", definition.strip()
+    pos = match.group(1).strip()
+    meaning = definition.strip()[match.end() :].strip()
+    return pos, meaning
+
+
+def render_plan_word_table(words: list[dict[str, Any]], theme: ConsoleTheme | None = None) -> list[str]:
+    rows = []
+    for index, word in enumerate(words, start=1):
+        pos, meaning = split_pos_definition(str(word.get("definition", "")))
+        rows.append(
+            {
+                "index": f"{index}.",
+                "word": str(word.get("word", "")),
+                "pos": pos,
+                "phonetic": normalize_display_phonetic(str(word.get("phonetic", ""))),
+                "meaning": meaning,
+                "reason": str(word.get("selection_reason", "")),
+            }
+        )
+    if not rows:
+        return []
+
+    index_width = max(len("No."), *(len(row["index"]) for row in rows))
+    word_width = max(12, min(16, max(len("Word"), *(len(row["word"]) for row in rows))))
+    pos_width = max(5, min(8, max(len("POS"), *(len(row["pos"]) for row in rows))))
+    phonetic_width = max(18, min(34, max(len("Phonetic"), *(len(row["phonetic"]) for row in rows))))
+    header = (
+        f"{'No.':<{index_width}}  "
+        f"{'Word':<{word_width}}  "
+        f"{'POS':<{pos_width}}  "
+        f"{'Phonetic':<{phonetic_width}}  "
+        "Reason"
+    )
+    lines = [theme.dim(header) if theme else header]
+    meaning_indent = index_width + 2 + word_width + 2 + pos_width + 2
+    for row in rows:
+        rendered_word = theme.word(row["word"]) if theme else row["word"]
+        rendered_pos = theme.pos(row["pos"]) if theme else row["pos"]
+        rendered_phonetic = theme.phonetic(row["phonetic"]) if theme else row["phonetic"]
+        rendered_meaning = render_definition(row["meaning"], theme) if theme else row["meaning"]
+        reason = f"({row['reason']})" if row["reason"] else ""
+        lines.append(
+            f"{visible_ljust(row['index'], index_width)}  "
+            f"{visible_ljust(rendered_word, word_width)}  "
+            f"{visible_ljust(rendered_pos, pos_width)}  "
+            f"{visible_ljust(rendered_phonetic, phonetic_width)}  "
+            f"{reason}".rstrip()
+        )
+        if row["meaning"]:
+            label = theme.dim("Meaning:") if theme else "Meaning:"
+            lines.append(f"{' ' * meaning_indent}{label} {rendered_meaning}")
+    return lines
 
 
 @dataclass
@@ -271,6 +343,7 @@ class LexiPilotAgent:
         self.console = console or Console()
         self.session: SessionState | None = None
         self.started_perf = time.perf_counter()
+        self.pending_user_interaction_wait_seconds = 0.0
 
     def _tool_line(self, name: str) -> None:
         if self.debug:
@@ -284,12 +357,15 @@ class LexiPilotAgent:
             self._tool_line(name)
         plan = build_session_plan(self.toolbox, self.profile, goal)
         self.session = SessionState(self.profile, goal, plan, phase=SessionPhase.STUDYING)
+        self.session.started_perf = self.started_perf
+        self.session.user_interaction_wait_seconds = self.pending_user_interaction_wait_seconds
+        self.pending_user_interaction_wait_seconds = 0.0
         self.session.planning_seconds = round(time.perf_counter() - started, 4)
         if self.debug:
             review_count = sum(1 for word in plan["planned_words"] if "next new word" not in word["selection_reason"])
             new_count = len(plan["planned_words"]) - review_count
             self.console.selected(f"{review_count} review words, {new_count} new words")
-        return format_plan(plan) + "\n\n" + self.next_card_text()
+        return format_plan(plan, self.console.theme) + "\n\n" + self.next_card_text()
 
     def next_card_text(self) -> str:
         if not self.session:
@@ -433,24 +509,34 @@ class LexiPilotAgent:
             return self.session.final_result
 
     def add_user_wait(self, seconds: float) -> None:
+        seconds = max(0.0, seconds)
         if self.session is not None:
-            self.session.user_interaction_wait_seconds += max(0.0, seconds)
+            self.session.user_interaction_wait_seconds += seconds
+        else:
+            self.pending_user_interaction_wait_seconds += seconds
 
     def timing_summary(self) -> dict[str, float]:
         session = self.session
         if session is None:
             return {}
         wall = time.perf_counter() - session.started_perf
-        wait = session.user_interaction_wait_seconds
+        wait = min(session.user_interaction_wait_seconds, max(0.0, wall))
+        active = max(0.0, wall - wait)
+        model = round(sum(self.toolbox.runtime.model_request_durations), 4)
+        model_non_overlap = min(model, round(active, 4))
+        local_non_model = max(0.0, active - model_non_overlap)
         return {
             "session_wall_seconds": round(wall, 4),
             "user_interaction_wait_seconds": round(wait, 4),
-            "active_system_seconds": round(max(0.0, wall - wait), 4),
-            "model_request_seconds": round(sum(self.toolbox.runtime.model_request_durations), 4),
+            "active_system_seconds": round(active, 4),
+            "model_request_seconds": model,
             "tool_execution_seconds": round(sum(float(event.get("duration", 0.0)) for event in self.toolbox.tool_events), 4),
             "story_generation_seconds": round(self.toolbox.runtime.story_generation_duration, 4),
             "planning_seconds": session.planning_seconds,
             "finalization_seconds": session.finalization_seconds,
+            "non_overlapping_user_interaction_wait_seconds": round(wait, 4),
+            "non_overlapping_model_api_execution_seconds": round(model_non_overlap, 4),
+            "non_overlapping_local_processing_seconds": round(local_non_model, 4),
         }
 
 
@@ -494,12 +580,12 @@ def priority_words_for_session(session: SessionState, limit: int = 8) -> list[st
 
 
 def render_card(word: dict[str, Any], index: int, total: int, theme: ConsoleTheme) -> str:
-    definition = str(word.get("definition", ""))
-    definition = vt.POS_SPLIT_RE.sub(lambda match: theme.pos(match.group(1)), definition)
+    definition = render_definition(str(word.get("definition", "")), theme)
+    phonetic = normalize_display_phonetic(str(word.get("phonetic", "")))
     choices = [
         theme.correct("y"),
         theme.incorrect("n"),
-        theme.cyan("etymology"),
+        theme.cyan("e=etymology"),
         theme.skipped("skip"),
         theme.dim("stop"),
     ]
@@ -508,9 +594,9 @@ def render_card(word: dict[str, Any], index: int, total: int, theme: ConsoleThem
             "",
             theme.dim(f"Card {index}/{total}"),
             "",
-            f"WORD: {theme.word(str(word['word']))}",
-            f"PHONETIC: {theme.phonetic(str(word.get('phonetic', '')))}",
-            f"DEFINITION: {definition}",
+            theme.word(str(word["word"])),
+            theme.phonetic(phonetic),
+            definition,
             "",
             "Answer: " + " / ".join(choices),
         ]
@@ -519,6 +605,14 @@ def render_card(word: dict[str, Any], index: int, total: int, theme: ConsoleThem
 
 def render_material(material: dict[str, Any], theme: ConsoleTheme) -> str:
     target_words = [str(word) for word in material.get("target_words", [])]
+    target_phonetics = {
+        str(word): str(value)
+        for word, value in (material.get("target_phonetics") or {}).items()
+    }
+    target_parts_of_speech = {
+        str(word): str(value)
+        for word, value in (material.get("target_parts_of_speech") or {}).items()
+    }
     target_translations = {
         str(word): [str(item) for item in values]
         for word, values in (material.get("target_translations") or {}).items()
@@ -526,17 +620,81 @@ def render_material(material: dict[str, Any], theme: ConsoleTheme) -> str:
     }
     english = highlight_english_terms(str(material.get("english_passage") or material.get("english") or ""), target_words, theme)
     chinese = highlight_chinese_terms(str(material.get("chinese_translation") or material.get("chinese") or ""), target_translations, theme)
-    mappings = []
-    for word in target_words:
-        phrases = target_translations.get(word) or []
-        if phrases:
-            mappings.append(f"{theme.word(word)} -> {theme.chinese_target('；'.join(phrases))}")
-    parts = ["Practice passage:", english]
+    mappings = render_vocabulary_mapping(target_words, target_phonetics, target_parts_of_speech, target_translations, theme)
+    examples = render_example_sentences(target_words, target_translations, theme)
+    parts = [
+        "Let's get familiar with the priority words, then use them in context.",
+        "",
+        "Practice passage:",
+        english,
+    ]
     if chinese:
         parts.extend(["", "Chinese:", chinese])
+    if examples:
+        parts.extend(["", "Example sentences:", examples])
     if mappings:
-        parts.extend(["", "Vocabulary mapping:", *mappings])
+        parts.extend(["", "Vocabulary mapping:", mappings])
     return "\n".join(parts)
+
+
+def visible_ljust(text: str, width: int) -> str:
+    return text + " " * max(0, width - len(re.sub(r"\x1b\[[0-9;]*m", "", text)))
+
+
+def render_vocabulary_mapping(
+    target_words: list[str],
+    target_phonetics: dict[str, str],
+    target_parts_of_speech: dict[str, str],
+    target_translations: dict[str, list[str]],
+    theme: ConsoleTheme,
+) -> str:
+    rows = []
+    for word in target_words:
+        phrases = target_translations.get(word) or []
+        pos = target_parts_of_speech.get(word, "")
+        meaning = "；".join(phrases)
+        meaning_with_pos = f"{pos} {meaning}".strip()
+        if meaning or target_phonetics.get(word):
+            rows.append((word, normalize_display_phonetic(target_phonetics.get(word, "")), meaning_with_pos))
+    if not rows:
+        return ""
+
+    word_width = max(len("Word"), *(len(row[0]) for row in rows))
+    phonetic_width = max(len("Phonetic"), *(len(row[1]) for row in rows))
+    header = (
+        f"{visible_ljust(theme.dim('Word'), word_width)}  "
+        f"{visible_ljust(theme.dim('Phonetic'), phonetic_width)}  "
+        f"{theme.dim('Chinese meaning')}"
+    )
+    lines = [header]
+    for word, phonetic, meaning in rows:
+        lines.append(
+            f"{visible_ljust(theme.word(word), word_width)}  "
+            f"{visible_ljust(theme.phonetic(phonetic), phonetic_width)}  "
+            f"{theme.chinese_target(meaning)}"
+        )
+    return "\n".join(lines)
+
+
+def normalize_display_phonetic(phonetic: str) -> str:
+    return phonetic.replace("英:", "UK:").replace("美:", "US:").replace("UK:/", "UK: /").replace("US:/", "US: /")
+
+
+def render_example_sentences(
+    target_words: list[str],
+    target_translations: dict[str, list[str]],
+    theme: ConsoleTheme,
+) -> str:
+    lines = []
+    for index, word in enumerate(target_words, start=1):
+        meaning = "；".join((target_translations.get(word) or [])[:2])
+        sentence = f"{index}. The researcher used {word} carefully in an academic discussion."
+        rendered_sentence = highlight_english_terms(sentence, [word], theme)
+        if meaning:
+            lines.append(f"{rendered_sentence} ({theme.chinese_target(meaning)})")
+        else:
+            lines.append(rendered_sentence)
+    return "\n".join(lines)
 
 
 def final_summary_lines(
@@ -547,13 +705,17 @@ def final_summary_lines(
     timings: dict[str, float],
     theme: ConsoleTheme,
 ) -> list[str]:
-    incorrect = ", ".join(theme.incorrect(word) for word in session.incorrect_words) or "none"
-    priority = ", ".join(theme.word(word) for word in session.priority_words) or "none"
+    none = theme.dim("none")
+    reviewed = ", ".join(session.reviewed_words) or none
+    new_words = ", ".join(word["word"] for word in session.plan.get("new_words", [])) or none
+    incorrect_list = ", ".join(theme.incorrect(word) for word in session.incorrect_words) or none
+    incorrect = f"{len(session.incorrect_words)} - {incorrect_list}" if session.incorrect_words else f"0 - {none}"
+    priority = ", ".join(theme.word(word) for word in session.priority_words) or none
     return [
         theme.title("Session completed"),
         "",
-        f"Reviewed: {', '.join(session.reviewed_words) or 'none'}",
-        f"New words: {', '.join(word['word'] for word in session.plan.get('new_words', [])) or 'none'}",
+        f"Reviewed: {reviewed}",
+        f"New words: {new_words}",
         f"Correct: {theme.correct(str(len(session.correct_words)))} ({rate:.0f}%)",
         f"Incorrect: {incorrect}",
         f"Priority words: {priority}",
@@ -565,8 +727,9 @@ def final_summary_lines(
         f"User interaction time: {timings.get('user_interaction_wait_seconds', 0):.2f}s",
         f"Active system time: {timings.get('active_system_seconds', 0):.2f}s",
         f"Model time: {timings.get('model_request_seconds', 0):.2f}s",
-        f"Tool time: {timings.get('tool_execution_seconds', 0):.2f}s",
-        f"Story generation time: {timings.get('story_generation_seconds', 0):.2f}s",
+        f"Tool time: {timings.get('tool_execution_seconds', 0):.2f}s (overlapping detail)",
+        f"Story generation time: {timings.get('story_generation_seconds', 0):.2f}s (subset of tool time)",
+        f"Non-overlap breakdown: user {timings.get('non_overlapping_user_interaction_wait_seconds', 0):.2f}s, model/API {timings.get('non_overlapping_model_api_execution_seconds', 0):.2f}s, local {timings.get('non_overlapping_local_processing_seconds', 0):.2f}s",
         f"Progress: {theme.dim(str(toolbox.state_path(session.profile)))}",
         f"Session record: {theme.dim(session.session_record_path or 'none')}",
         f"Performance report: {theme.dim(session.performance_report_path or 'none')}",

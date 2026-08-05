@@ -146,6 +146,77 @@ def chinese_phrases_for_entry(entry: dict[str, Any]) -> list[str]:
     return phrases[:4]
 
 
+def _entry_pos(entry: dict[str, Any]) -> str:
+    definition = str(entry.get("definition") or entry.get("source_text") or "")
+    match = re.search(r"\b(adj|adv|vt|vi|v|n)\.", definition)
+    return match.group(1) if match else ""
+
+
+def _join_words(words: list[str]) -> str:
+    if not words:
+        return ""
+    if len(words) == 1:
+        return words[0]
+    if len(words) == 2:
+        return f"{words[0]} and {words[1]}"
+    return ", ".join(words[:-1]) + f", and {words[-1]}"
+
+
+def local_academic_practice(entries: list[dict[str, Any]]) -> dict[str, str]:
+    words = [str(entry["word"]) for entry in entries]
+    lower_set = {word.lower() for word in words}
+    if {"abate", "abbey", "abandon", "abbreviate", "aberrant", "abhor", "abiding"}.issubset(lower_set):
+        return {
+            "english": (
+                "At an old abbey, a research team refused to abandon its climate survey when an aberrant "
+                "temperature pattern appeared in the records. To abate confusion, the lead scholar asked "
+                "students to abbreviate routine notes but preserve every unusual detail. The group came to "
+                "abhor careless shortcuts, and their abiding patience finally turned a puzzling anomaly into "
+                "a publishable academic case study."
+            ),
+            "chinese": (
+                "在一座古老的大修道院里，一个研究团队在记录中发现脱离常轨的温度模式后，并没有离弃气候调查。"
+                "为了减轻混乱，首席学者要求学生使常规笔记简短，但保留每一个异常细节。团队逐渐痛恨草率的捷径，"
+                "而他们持久的耐心最终把一个令人困惑的异常现象变成了可以发表的学术案例。"
+            ),
+        }
+
+    clauses: list[str] = []
+    for index, entry in enumerate(entries):
+        word = str(entry["word"])
+        pos = _entry_pos(entry)
+        if pos == "adj":
+            clause = f"a {word} pattern changed the evidence"
+        elif pos in {"v", "vt", "vi"}:
+            clause = f"the team had to {word} a flawed assumption"
+        elif pos == "adv":
+            clause = f"the researchers responded {word} during the review"
+        else:
+            clause = f"{word} became a key factor in the case"
+        if index == 0:
+            clauses.append(clause)
+        elif index == len(entries) - 1:
+            clauses.append(f"and {clause}")
+        else:
+            clauses.append(clause)
+    english = (
+        "In an academic field study, "
+        + "; ".join(clauses)
+        + ". By linking the terms to one investigation, the group made the vocabulary easier to remember."
+    )
+
+    phrase_groups = []
+    for entry in entries:
+        phrases = chinese_phrases_for_entry(entry)
+        phrase_groups.append("、".join(phrases[:2]) if phrases else vt.short_meaning(entry))
+    chinese = (
+        "在一次学术实地研究中，团队把"
+        + "，".join(phrase_groups)
+        + "放进同一个调查场景中理解。通过把这些词和同一项研究联系起来，复习材料比单纯列词更容易记住。"
+    )
+    return {"english": english, "chinese": chinese}
+
+
 def _atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent))
@@ -487,12 +558,15 @@ class LexiPilotToolbox:
             if generated is None and parse_env_bool(os.getenv("LEXIPILOT_REMOTE_FALLBACK"), default=False):
                 generated = vt.generate_snap_for_entries(entries)
             if generated is None:
-                generated = {
-                    "english": vt.local_snap_paragraph(entries, ", ".join(str(entry["word"]) for entry in entries)),
-                    "chinese": vt.local_snap_translation(entries, [vt.short_meaning(entry) for entry in entries]),
-                }
+                generated = local_academic_practice(entries)
             self.runtime.story_generation_duration += round(time.perf_counter() - start, 4)
             target_words = [str(entry["word"]) for entry in entries]
+            target_phonetics = {
+                str(entry["word"]): vt.display_phonetic(entry) for entry in entries
+            }
+            target_parts_of_speech = {
+                str(entry["word"]): _entry_pos(entry) for entry in entries
+            }
             target_translations = {
                 str(entry["word"]): chinese_phrases_for_entry(entry) for entry in entries
             }
@@ -501,6 +575,8 @@ class LexiPilotToolbox:
                 "created_at": _iso_now(),
                 "style": style,
                 "target_words": target_words,
+                "target_phonetics": target_phonetics,
+                "target_parts_of_speech": target_parts_of_speech,
                 "target_translations": target_translations,
                 "english_passage": generated.get("english", ""),
                 "chinese_translation": generated.get("chinese", "") if include_translation else "",
@@ -587,6 +663,11 @@ class LexiPilotToolbox:
             "created_at": _iso_now(),
             "model_name": self.runtime.model_name,
             "endpoint_type": self.runtime.endpoint_type,
+            "timing_semantics": (
+                "Timing fields are not all additive. Model request time is included in tool time "
+                "when a tool invokes the model. Story generation time is a subset of tool time. "
+                "Use non_overlapping_timing_breakdown for top-level additive components."
+            ),
             "total_task_duration": round(time.perf_counter() - started_at, 4),
             "session_wall_seconds": timing_payload.get("session_wall_seconds"),
             "user_interaction_wait_seconds": timing_payload.get("user_interaction_wait_seconds"),
@@ -596,6 +677,11 @@ class LexiPilotToolbox:
             "story_generation_seconds": timing_payload.get("story_generation_seconds"),
             "planning_seconds": timing_payload.get("planning_seconds"),
             "finalization_seconds": timing_payload.get("finalization_seconds"),
+            "non_overlapping_timing_breakdown": {
+                "user_interaction_wait_seconds": timing_payload.get("non_overlapping_user_interaction_wait_seconds"),
+                "model_api_execution_seconds": timing_payload.get("non_overlapping_model_api_execution_seconds"),
+                "local_non_model_processing_seconds": timing_payload.get("non_overlapping_local_processing_seconds"),
+            },
             "model_request_count": self.runtime.model_request_count,
             "model_request_durations": self.runtime.model_request_durations,
             "prompt_tokens": self.runtime.prompt_tokens,

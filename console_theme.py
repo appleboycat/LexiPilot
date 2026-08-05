@@ -30,33 +30,52 @@ class ConsoleTheme:
         return f"\033[{code}m{text}\033[0m"
 
     def title(self, text: str) -> str:
-        return self.style(text, "1;96")
+        return self.style(text, "1")
 
     def label(self, name: str) -> str:
         palette = {
-            "PLAN": "1;36",
-            "TOOL": "94",
-            "SELECTED": "1;35",
+            "PLAN": "1",
+            "TOOL": "2",
+            "SELECTED": "1",
             "ANSWER": "1;37",
-            "ADAPT": "1;33",
-            "GENERATE": "1;35",
+            "ADAPT": "1",
+            "GENERATE": "1",
             "SAVED": "1;32",
-            "STATUS": "36",
-            "WARNING": "33",
+            "STATUS": "2",
+            "WARNING": "1",
             "ERROR": "1;31",
             "FAIL": "1;31",
             "PASS": "1;32",
         }
         return self.style(f"[{name}]", palette.get(name, "1"))
 
+    def event_text(self, name: str, text: str) -> str:
+        palette = {
+            "PLAN": "2",
+            "SELECTED": "2",
+            "ADAPT": "2",
+            "GENERATE": "2",
+            "SAVED": "32",
+            "STATUS": "2",
+            "WARNING": "2",
+            "ERROR": "31",
+            "FAIL": "31",
+            "PASS": "32",
+        }
+        code = palette.get(name)
+        return self.style(text, code) if code else text
+
     def word(self, text: str) -> str:
         return self.style(text, "1;93")
 
     def phonetic(self, text: str) -> str:
-        return self.style(text, "36")
+        return self.style(text, "94")
 
     def pos(self, text: str) -> str:
-        return self.style(text, "35")
+        return self.style(text, "2")
+
+    def definition(self, text: str) -> str:
+        return self.style(text, "1;95")
 
     def chinese_target(self, text: str) -> str:
         return self.style(text, "1;95")
@@ -68,13 +87,13 @@ class ConsoleTheme:
         return self.style(text, "1;31")
 
     def skipped(self, text: str) -> str:
-        return self.style(text, "33")
+        return self.style(text, "2")
 
     def dim(self, text: str) -> str:
         return self.style(text, "2")
 
     def cyan(self, text: str) -> str:
-        return self.style(text, "36")
+        return self.style(text, "2")
 
 
 def should_enable_color() -> bool:
@@ -115,13 +134,13 @@ class Console:
         print(text)
 
     def event(self, label: str, message: str) -> None:
-        print(f"{self.theme.label(label)} {message}")
+        print(f"{self.theme.label(label)} {self.theme.event_text(label, message)}")
 
     def plan(self, message: str) -> None:
         self.event("PLAN", message)
 
     def tool(self, name: str) -> None:
-        self.event("TOOL", self.theme.style(name, "1"))
+        print(self.theme.dim(f"[TOOL] {name}"))
 
     def selected(self, message: str) -> None:
         self.event("SELECTED", message)
@@ -140,6 +159,27 @@ class Console:
 
     def status(self, message: str) -> None:
         self.event("STATUS", message)
+
+    def profile_status(self, summary: dict[str, object]) -> None:
+        total = int(summary.get("total_vocabulary_count", 0) or 0)
+        started = int(summary.get("started_word_count", 0) or 0)
+        progress_ratio = (started / total) if total > 0 else 0.0
+        progress_width = 28
+        filled = max(0, min(progress_width, int(round(progress_ratio * progress_width))))
+        bar = "#" * filled + "-" * (progress_width - filled)
+        percent = progress_ratio * 100 if total else 0.0
+        lines = [
+            f"Profile: {summary.get('profile', '')}",
+            f"Started words: {started} / {total}",
+            f"Progress: [{bar}] {percent:.1f}%",
+            f"Due today: {summary.get('reviews_due_today', 0)}",
+            f"Historical misses: {summary.get('total_incorrect_answers', 0)}",
+            f"Current vocabulary position: {summary.get('current_new_word_position', 0)}",
+            f"Recent activity: {len(summary.get('recent_study_statistics', {}) or {})} days",
+        ]
+        print(self.theme.label("STATUS"))
+        for line in lines:
+            print(f"  {self.theme.event_text('STATUS', line)}")
 
     def answer(self, word: str, outcome: str) -> None:
         if outcome == "correct":
