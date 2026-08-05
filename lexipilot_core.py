@@ -132,7 +132,7 @@ def format_plan(plan: dict[str, Any], theme: ConsoleTheme | None = None) -> str:
         f"Profile has {plan['summary']['reviews_due_today']} due reviews and {plan['summary']['total_incorrect_answers']} recorded misses.",
     ]
     lines.extend(render_plan_word_table(plan["planned_words"], theme))
-    lines.append("Answer each card with y, n, e=etymology, skip, or stop.")
+    lines.append("Press: y / n / e=etymology / s=skip / stop.")
     return "\n".join(lines)
 
 
@@ -398,7 +398,7 @@ class LexiPilotAgent:
             self.session.reviewed_words.append(word["word"])
             self.session.correct_words.append(word["word"])
             self.session.cursor += 1
-            return f"Recorded correct. Next due: {result['due_date']}\n" + self.next_card_text()
+            return f"Recorded correct. {stage_marks(result['review_stage'])}\n" + self.next_card_text()
         if answer in {"n", "no"}:
             key = word["word"].lower()
             if key in self.session.answered_words:
@@ -413,12 +413,12 @@ class LexiPilotAgent:
             self.session.incorrect_words.append(word["word"])
             self.session.current_missed_words.append(word["word"])
             self.session.cursor += 1
-            return f"Recorded missed. Stage reset to {result['review_stage']}; next due: {result['due_date']}.\n" + self.next_card_text()
+            return f"Recorded missed. {stage_marks(result['review_stage'])}\n" + self.next_card_text()
         if answer in {"etymology", "e"}:
             self._tool_line("lookup_etymology")
             result = self.toolbox.lookup_etymology(word["word"])
             return f"{result['etymology']}\n\n{self.next_card_text()}"
-        if answer == "skip":
+        if answer in {"skip", "s"}:
             self.session.skipped_words.append(word["word"])
             if self.debug:
                 self.console.answer(word["word"], "skipped")
@@ -426,7 +426,7 @@ class LexiPilotAgent:
             return "Skipped without changing progress.\n" + self.next_card_text()
         if answer == "stop":
             return self.finish_session()
-        return "Please answer with y, n, etymology, skip, or stop."
+        return "Please press y, n, e=etymology, s=skip, or stop."
 
     def finish_session(self) -> str:
         if not self.session:
@@ -448,6 +448,7 @@ class LexiPilotAgent:
                     self.console.generate("Creating academic practice passage")
                 self._tool_line("generate_practice_story")
                 material = self.toolbox.generate_practice_story(self.profile, practice_words[:8], "academic", True)
+                material["priority_reasons"] = priority_reasons_for_session(self.session, practice_words[:8])
                 self.session.generated_material = material
                 self.session.generated_material_path = material["path"]
                 material_text = render_material(material, self.console.theme)
@@ -579,6 +580,28 @@ def priority_words_for_session(session: SessionState, limit: int = 8) -> list[st
     return dedupe_words(session.incorrect_words + historical_selected + other_historical + fallback)[:limit]
 
 
+def priority_reasons_for_session(session: SessionState, priority_words: list[str]) -> dict[str, str]:
+    incorrect = {word.lower() for word in session.incorrect_words}
+    planned = {word["word"].lower(): word for word in session.plan.get("planned_words", [])}
+    missed = {word["word"].lower(): word for word in session.plan.get("missed_words", [])}
+    new_words = {word["word"].lower() for word in session.plan.get("new_words", [])}
+    reasons: dict[str, str] = {}
+    for word in priority_words:
+        key = word.lower()
+        if key in incorrect:
+            reasons[word] = "missed in this session"
+        elif key in planned and key in missed:
+            reasons[word] = "selected today and historically frequently missed"
+        elif key in missed:
+            count = missed[key].get("missed_count")
+            reasons[word] = f"historically frequently missed ({count} misses)" if count else "historically frequently missed"
+        elif key in new_words:
+            reasons[word] = "new word selected as fallback practice"
+        else:
+            reasons[word] = "review word selected as fallback practice"
+    return reasons
+
+
 def render_card(word: dict[str, Any], index: int, total: int, theme: ConsoleTheme) -> str:
     definition = render_definition(str(word.get("definition", "")), theme)
     phonetic = normalize_display_phonetic(str(word.get("phonetic", "")))
@@ -586,7 +609,7 @@ def render_card(word: dict[str, Any], index: int, total: int, theme: ConsoleThem
         theme.correct("y"),
         theme.incorrect("n"),
         theme.cyan("e=etymology"),
-        theme.skipped("skip"),
+        theme.skipped("s=skip"),
         theme.dim("stop"),
     ]
     return "\n".join(
@@ -594,13 +617,20 @@ def render_card(word: dict[str, Any], index: int, total: int, theme: ConsoleThem
             "",
             theme.dim(f"Card {index}/{total}"),
             "",
-            theme.word(str(word["word"])),
-            theme.phonetic(phonetic),
+            f"{theme.word(str(word['word']))}    {theme.phonetic(phonetic)}",
             definition,
             "",
-            "Answer: " + " / ".join(choices),
+            "Press: " + " / ".join(choices),
         ]
     )
+
+
+def stage_marks(stage: int | str) -> str:
+    try:
+        count = int(stage)
+    except (TypeError, ValueError):
+        count = 0
+    return "Stage: " + "-" * max(1, count)
 
 
 def render_material(material: dict[str, Any], theme: ConsoleTheme) -> str:
@@ -618,20 +648,21 @@ def render_material(material: dict[str, Any], theme: ConsoleTheme) -> str:
         for word, values in (material.get("target_translations") or {}).items()
         if isinstance(values, list)
     }
+    priority_reasons = {
+        str(word): str(reason)
+        for word, reason in (material.get("priority_reasons") or {}).items()
+    }
     english = highlight_english_terms(str(material.get("english_passage") or material.get("english") or ""), target_words, theme)
     chinese = highlight_chinese_terms(str(material.get("chinese_translation") or material.get("chinese") or ""), target_translations, theme)
     mappings = render_vocabulary_mapping(target_words, target_phonetics, target_parts_of_speech, target_translations, theme)
-    examples = render_example_sentences(target_words, target_translations, theme)
     parts = [
-        "Let's get familiar with the priority words, then use them in context.",
-        "",
-        "Practice passage:",
-        english,
+        "Let's focus on the words that need the most reinforcement, then use them in context.",
     ]
+    if priority_reasons:
+        parts.extend(["", "Why these words:", render_priority_reasons(target_words, priority_reasons, theme)])
+    parts.extend(["", "Practice passage:", english])
     if chinese:
         parts.extend(["", "Chinese:", chinese])
-    if examples:
-        parts.extend(["", "Example sentences:", examples])
     if mappings:
         parts.extend(["", "Vocabulary mapping:", mappings])
     return "\n".join(parts)
@@ -639,6 +670,16 @@ def render_material(material: dict[str, Any], theme: ConsoleTheme) -> str:
 
 def visible_ljust(text: str, width: int) -> str:
     return text + " " * max(0, width - len(re.sub(r"\x1b\[[0-9;]*m", "", text)))
+
+
+def render_priority_reasons(target_words: list[str], priority_reasons: dict[str, str], theme: ConsoleTheme) -> str:
+    lines = []
+    width = max(len(word) for word in target_words) if target_words else 0
+    for word in target_words:
+        reason = priority_reasons.get(word)
+        if reason:
+            lines.append(f"{visible_ljust(theme.word(word), width)}  {theme.dim(reason)}")
+    return "\n".join(lines)
 
 
 def render_vocabulary_mapping(
@@ -678,23 +719,6 @@ def render_vocabulary_mapping(
 
 def normalize_display_phonetic(phonetic: str) -> str:
     return phonetic.replace("英:", "UK:").replace("美:", "US:").replace("UK:/", "UK: /").replace("US:/", "US: /")
-
-
-def render_example_sentences(
-    target_words: list[str],
-    target_translations: dict[str, list[str]],
-    theme: ConsoleTheme,
-) -> str:
-    lines = []
-    for index, word in enumerate(target_words, start=1):
-        meaning = "；".join((target_translations.get(word) or [])[:2])
-        sentence = f"{index}. The researcher used {word} carefully in an academic discussion."
-        rendered_sentence = highlight_english_terms(sentence, [word], theme)
-        if meaning:
-            lines.append(f"{rendered_sentence} ({theme.chinese_target(meaning)})")
-        else:
-            lines.append(rendered_sentence)
-    return "\n".join(lines)
 
 
 def final_summary_lines(

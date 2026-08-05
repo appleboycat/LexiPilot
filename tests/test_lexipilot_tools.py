@@ -178,3 +178,23 @@ def test_local_academic_fallback_avoids_key_factor_template() -> None:
     assert "漏水的旋塞" in chinese
     assert "住户的反馈" in chinese
     assert "征用公共储物间" in chinese
+
+
+def test_local_academic_fallback_uses_unknown_words_in_real_context() -> None:
+    entries = [
+        {"word": "faucet", "definition": "n. 旋塞；插口"},
+        {"word": "ferment", "definition": "vi. 发酵；酝酿"},
+        {"word": "fertile", "definition": "adj. 富饶的；肥沃的"},
+        {"word": "fatigue", "definition": "n. 疲劳；疲乏"},
+    ]
+    result = local_academic_practice(entries)
+    english = result["english"]
+    chinese = result["chinese"]
+    assert "frustration began to ferment" in english
+    assert "fertile ground for a discussion" in english
+    assert "memorized definition" not in english
+    assert "practical role" not in english
+    assert "practice passage turns vocabulary" not in english
+    assert "不满开始发酵" in chinese
+    assert "肥沃的公共庭院" in chinese
+    assert "孤立词义背诵" not in chinese

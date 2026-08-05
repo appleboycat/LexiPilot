@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from console_theme import Console, ConsoleTheme, strip_ansi
-from lexipilot_core import LexiPilotAgent, SessionState, final_summary_lines, format_plan, priority_words_for_session, render_card, render_material
+from lexipilot_core import LexiPilotAgent, SessionState, final_summary_lines, format_plan, priority_reasons_for_session, priority_words_for_session, render_card, render_material, stage_marks
 from lexipilot_tools import LexiPilotToolbox
 from tests.test_lexipilot_tools import toolbox  # noqa: F401
 
@@ -81,6 +81,17 @@ def test_priority_deduplication(toolbox: LexiPilotToolbox) -> None:
     assert agent.session is not None
     agent.session.incorrect_words = ["granular", "granular"]
     assert priority_words_for_session(agent.session).count("granular") == 1
+
+
+def test_priority_reasons_explain_selection(toolbox: LexiPilotToolbox) -> None:
+    agent = make_agent(toolbox)
+    agent.plan("I have 15 minutes. Focus on missed words.")
+    assert agent.session is not None
+    agent.session.incorrect_words = ["falter"]
+    priority = priority_words_for_session(agent.session)
+    reasons = priority_reasons_for_session(agent.session, priority)
+    assert reasons["falter"] == "missed in this session"
+    assert reasons["granular"].startswith("selected today and historically frequently missed")
 
 
 def test_all_correct_uses_historical_or_fallback(toolbox: LexiPilotToolbox) -> None:
@@ -176,6 +187,7 @@ def test_render_material_highlights_without_saving_codes() -> None:
         "target_phonetics": {"abhor": "英:/əb'hɔː(r)/ 美:/əb'hɔːr/"},
         "target_parts_of_speech": {"abhor": "vt."},
         "target_translations": {"abhor": ["痛恨", "憎恶"]},
+        "priority_reasons": {"abhor": "missed in this session"},
         "english_passage": "The faculty abhorred waste.",
         "chinese_translation": "教师们痛恨浪费。",
     }
@@ -183,9 +195,13 @@ def test_render_material_highlights_without_saving_codes() -> None:
     assert "\033[" in rendered
     assert strip_ansi(rendered).count("abhorred") == 1
     plain = strip_ansi(rendered)
-    assert "Let's get familiar with the priority words" in plain
-    assert "Example sentences:" in plain
-    assert "The researcher used abhor carefully" in plain
+    assert "Let's focus on the words that need the most reinforcement" in plain
+    assert "Why these words:" in plain
+    assert "abhor  missed in this session" in plain
+    assert "Meaning review:" in plain
+    assert "abhor  vt. 痛恨；憎恶" in plain
+    assert "Example sentences:" not in plain
+    assert "The researcher used abhor carefully" not in plain
     assert "Word   Phonetic" in plain
     assert "abhor  UK: /əb'hɔː(r)/ US: /əb'hɔːr/  vt. 痛恨；憎恶" in plain
 
@@ -298,7 +314,9 @@ def test_card_highlights_word_phonetic_and_chinese_meaning() -> None:
     assert "DEFINITION:" not in plain
     assert "abhor" in plain
     assert "/əb'hɔː(r)/" in plain
+    assert "abhor    UK: /əb'hɔː(r)/ US: /əb'hɔːr/" in plain
     assert "痛恨，憎恶" in plain
+    assert "Press: y / n / e=etymology / s=skip / stop" in plain
 
 
 def test_card_plain_when_color_disabled() -> None:
@@ -312,6 +330,26 @@ def test_card_plain_when_color_disabled() -> None:
     assert "abhor" in rendered
     assert "UK: /əb'hɔː(r)/ US: /əb'hɔːr/" in rendered
     assert "痛恨，憎恶" in rendered
+
+
+def test_recorded_answer_response_shows_stage_not_due_date(toolbox: LexiPilotToolbox) -> None:
+    agent = make_agent(toolbox)
+    agent.plan("I have 6 minutes. Focus on missed words.")
+    response = agent.handle_answer("y")
+    assert "Next due" not in response
+    assert "Stage: " in response
+
+
+def test_s_shortcut_skips_without_progress(toolbox: LexiPilotToolbox) -> None:
+    agent = make_agent(toolbox)
+    agent.plan("I have 6 minutes. Focus on missed words.")
+    response = agent.handle_answer("s")
+    assert "Skipped without changing progress." in response
+
+
+def test_stage_marks_use_dashes() -> None:
+    assert stage_marks(3) == "Stage: ---"
+    assert stage_marks(0) == "Stage: -"
 
 
 def test_summary_none_values_are_dim_not_vocabulary_colors(toolbox: LexiPilotToolbox) -> None:

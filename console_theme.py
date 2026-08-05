@@ -164,28 +164,41 @@ class Console:
         total = int(summary.get("total_vocabulary_count", 0) or 0)
         started = int(summary.get("started_word_count", 0) or 0)
         progress_ratio = (started / total) if total > 0 else 0.0
-        progress_width = 28
+        progress_width = 20
         filled = max(0, min(progress_width, int(round(progress_ratio * progress_width))))
-        bar = "#" * filled + "-" * (progress_width - filled)
+        bar = "█" * filled + "░" * (progress_width - filled)
         percent = progress_ratio * 100 if total else 0.0
-        lines = [
-            f"Profile: {summary.get('profile', '')}",
-            f"Started words: {started} / {total}",
-            f"Progress: [{bar}] {percent:.1f}%",
-            f"Due today: {summary.get('reviews_due_today', 0)}",
-            f"Historical misses: {summary.get('total_incorrect_answers', 0)}",
-            f"Current vocabulary position: {summary.get('current_new_word_position', 0)}",
-            f"Recent activity: {len(summary.get('recent_study_statistics', {}) or {})} days",
+        rows = [
+            ("Profile", str(summary.get("profile", ""))),
+            ("Started words", f"{started} / {total}"),
+            ("Progress", f"[{bar}] {percent:.1f}%"),
+            ("Due today", str(summary.get("reviews_due_today", 0))),
+            ("Historical misses", str(summary.get("total_incorrect_answers", 0))),
+            ("Current position", str(summary.get("current_new_word_position", 0))),
+            ("Recent activity", f"{len(summary.get('recent_study_statistics', {}) or {})} days"),
         ]
-        print(self.theme.label("STATUS"))
-        for line in lines:
-            print(f"  {self.theme.event_text('STATUS', line)}")
+        self.box("LexiPilot Status", rows)
+
+    def box(self, title: str, rows: list[tuple[str, str]], width: int = 78) -> None:
+        inner = max(40, width - 2)
+        top = "╭" + "─" * inner + "╮"
+        bottom = "╰" + "─" * inner + "╯"
+        print(self.theme.dim(top))
+        print(self.theme.dim("│ " + title.ljust(inner - 2) + " │"))
+        print(self.theme.dim("│" + " " * inner + "│"))
+        label_width = max((len(label) for label, _ in rows), default=0)
+        for label, value in rows:
+            text = f"  {label + ':':<{label_width + 1}}  {value}"
+            if len(strip_ansi(text)) > inner:
+                text = text[: max(0, inner - 1)] + "…"
+            print(self.theme.dim("│") + self.theme.dim(text.ljust(inner)) + self.theme.dim("│"))
+        print(self.theme.dim(bottom))
 
     def answer(self, word: str, outcome: str) -> None:
         if outcome == "correct":
-            rendered = self.theme.correct("correct")
+            rendered = self.theme.correct("✓")
         elif outcome == "incorrect":
-            rendered = self.theme.incorrect("incorrect")
+            rendered = self.theme.incorrect("✗")
         else:
             rendered = self.theme.skipped("skipped")
-        self.event("ANSWER", f"{word}: {rendered}")
+        self.event("ANSWER", rendered)

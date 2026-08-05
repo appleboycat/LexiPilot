@@ -92,6 +92,14 @@ def test_tool_line_is_dim(capsys) -> None:
     assert strip_ansi(output).strip() == "[TOOL] save_session_summary"
 
 
+def test_answer_line_uses_symbol_without_word(capsys) -> None:
+    console = Console(ConsoleTheme(enabled=False))
+    console.answer("fertile", "correct")
+    output = capsys.readouterr().out
+    assert "[ANSWER] ✓" in output
+    assert "fertile" not in output
+
+
 def test_profile_status_multiline_progress(capsys) -> None:
     console = Console(ConsoleTheme(enabled=False))
     console.profile_status(
@@ -106,9 +114,10 @@ def test_profile_status_multiline_progress(capsys) -> None:
         }
     )
     output = capsys.readouterr().out
-    assert "[STATUS]\n" in output
-    assert "Profile: default" in output
-    assert "Started words: 500 / 2000" in output
-    assert "Progress: [#######---------------------] 25.0%" in output
-    assert "Due today: 120" in output
-    assert "Recent activity: 2 days" in output
+    assert "╭" in output
+    assert "LexiPilot Status" in output
+    assert "Profile:" in output and "default" in output
+    assert "Started words:" in output and "500 / 2000" in output
+    assert "Progress:" in output and "[█████░░░░░░░░░░░░░░░] 25.0%" in output
+    assert "Due today:" in output and "120" in output
+    assert "Recent activity:" in output and "2 days" in output

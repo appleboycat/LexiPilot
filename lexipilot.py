@@ -35,7 +35,7 @@ def print_profile_status(profile: str, toolbox: LexiPilotToolbox, console: Conso
     console.profile_status(summary)
 
 
-POST_COMPLETION_STUDY_INPUTS = {"y", "yes", "n", "no", "e", "etymology", "skip", "stop"}
+POST_COMPLETION_STUDY_INPUTS = {"y", "yes", "n", "no", "e", "etymology", "s", "skip", "stop"}
 TERMINAL_PHASES = {SessionPhase.COMPLETED, SessionPhase.STOPPED, SessionPhase.FAILED}
 
 

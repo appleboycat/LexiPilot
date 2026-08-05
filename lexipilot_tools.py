@@ -176,6 +176,8 @@ FALLBACK_ENGLISH_SENTENCES = {
     "flair": "One student with a flair for visual design turned the findings into a clear public poster.",
     "extol": "The final report did not simply extol the research team; it explained how the evidence had changed campus policy.",
     "faculty": "Faculty members reviewed the evidence before the recommendations were sent to the dean.",
+    "ferment": "After several ignored complaints, frustration began to ferment among residents and pushed them to organize a formal petition.",
+    "fertile": "The neglected courtyard became fertile ground for a discussion about how shared spaces influence health, safety, and community life.",
 }
 
 
@@ -193,6 +195,8 @@ FALLBACK_CHINESE_SENTENCES = {
     "flair": "一名有设计天分的学生把研究结果做成了清晰的公共海报。",
     "extol": "最终报告并不是单纯颂扬研究团队，而是解释证据如何改变了校园政策。",
     "faculty": "教师成员在建议提交给院长前审阅了证据。",
+    "ferment": "几次投诉被忽视后，住户之间的不满开始发酵，并促使他们组织正式请愿。",
+    "fertile": "这片原本可以是肥沃的公共庭院，如今却成了讨论健康、安全和社区生活的有力例子。",
 }
 
 
@@ -202,11 +206,12 @@ def _fallback_sentence(entry: dict[str, Any]) -> str:
     if known:
         return known
     pos = _entry_pos(entry)
+    meaning = " / ".join(chinese_phrases_for_entry(entry)[:2]) or vt.short_meaning(entry)
     if pos == "adj":
-        return f"The team used {word} to describe a pattern that changed how readers interpreted the evidence."
+        return f"The committee described one recurring condition as {word}, linking the label to residents' reports of {meaning}."
     if pos in {"v", "vt", "vi"}:
-        return f"The report used {word} in a precise context so the claim would not sound like a memorized definition."
-    return f"The report connected {word} to a specific observation, giving the term a practical role in the study."
+        return f"The revised policy had to {word} the problem in a way that residents could connect with {meaning}."
+    return f"The survey treated {word} as a concrete issue after residents repeatedly described {meaning}."
 
 
 def _fallback_chinese_sentence(entry: dict[str, Any]) -> str:
@@ -215,7 +220,12 @@ def _fallback_chinese_sentence(entry: dict[str, Any]) -> str:
     if known:
         return known
     phrases = "、".join(chinese_phrases_for_entry(entry)[:2]) or vt.short_meaning(entry)
-    return f"报告把 {word} 和“{phrases}”放进具体观察中，而不是只把它当作孤立词义背诵。"
+    pos = _entry_pos(entry)
+    if pos == "adj":
+        return f"委员会用 {word} 描述一种反复出现的状态，并把它和“{phrases}”这样的住户反馈联系起来。"
+    if pos in {"v", "vt", "vi"}:
+        return f"修订后的政策需要用 {word} 处理这个问题，使住户能把措施和“{phrases}”联系起来。"
+    return f"在住户反复提到“{phrases}”之后，调查把 {word} 视为一个具体问题。"
 
 
 def local_academic_practice(entries: list[dict[str, Any]]) -> dict[str, str]:
@@ -240,12 +250,12 @@ def local_academic_practice(entries: list[dict[str, Any]]) -> dict[str, str]:
     english = (
         "During a campus policy study, researchers examined how neglected facilities affected student life. "
         + " ".join(_fallback_sentence(entry) for entry in entries)
-        + " By placing each term inside the same investigation, the practice passage turns vocabulary into a coherent scene."
+        + " The final recommendation asked the university to repair the building, publish maintenance data, and respond to residents before minor problems became public conflicts."
     )
     chinese = (
         "在一次校园政策研究中，研究者考察了被忽视的设施如何影响学生生活。"
         + "".join(_fallback_chinese_sentence(entry) for entry in entries)
-        + "通过把每个词放进同一项调查，练习段落把词汇变成了连贯的场景。"
+        + "最终建议要求学校维修建筑、公开维护数据，并在小问题演变成公共冲突前回应住户。"
     )
     return {"english": english, "chinese": chinese}
 
