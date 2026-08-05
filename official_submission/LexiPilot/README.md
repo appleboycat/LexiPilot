@@ -7,7 +7,7 @@
 
 **Project:** LexiPilot - A Private Adaptive Vocabulary Learning Agent  
 **Source repository:** https://github.com/appleboycat/LexiPilot  
-**Demo video:** `<ADD_VIDEO_URL>`
+**Demo video:** https://github.com/appleboycat/LexiPilot/blob/main/submission/video/lexi_pilot_en.mp4
 
 ## Project
 

@@ -79,7 +79,7 @@ endpoint.
 
 ### Demo Video
 
-`<ADD_VIDEO_URL>`
+https://github.com/appleboycat/LexiPilot/blob/main/submission/video/lexi_pilot_en.mp4
 
 Video metadata:
 https://github.com/appleboycat/LexiPilot/blob/main/submission/video/VIDEO_LINK.md

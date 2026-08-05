@@ -33,22 +33,20 @@ Follow `submission/evidence/evidence_manifest.md`. Capture only real output.
 Redact API keys, tokens, endpoint URLs, account IDs, private IPs, and unrelated
 personal information.
 
-### 2. Record and Upload the 3-5 Minute Video
+### 2. Confirm the Demo Video
 
-The current English-narrated candidate is `2:10` and therefore remains too
-short. It is compressed to `4.8 MB`, so file size is no longer a blocker.
+The current English-narrated candidate is `2:10`, compressed to `4.8 MB`, and
+linked from the submission documents. Its duration is shorter than the
+officially recommended 3-5 minutes, but the current candidate is being used for
+submission.
 
 Use:
 
 - `submission/video/VIDEO_SCRIPT.md`
 - `submission/video/VIDEO_COMMANDS.md`
 
-After upload, update:
-
-- `submission/video/VIDEO_LINK.md`
-- `submission/PR_BODY.md`
-- `official_submission/LexiPilot/demo_video.md`
-- `official_submission/LexiPilot/README.md`
+Before opening the Pull Request, verify that the public GitHub video link opens
+without authentication and plays or downloads successfully.
 
 ### 3. Fork, Push, and Open the Official Pull Request
 
@@ -88,7 +86,7 @@ submission preparation process.
 
 ## Final Human Review
 
-- [ ] Video duration is 3-5 minutes.
+- [x] Current demo video is linked from all submission documents.
 - [ ] Video shows actual Radeon endpoint inference.
 - [ ] No credential or private endpoint appears in video or screenshots.
 - [ ] GPU model and software versions come from actual evidence.
