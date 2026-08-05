@@ -155,7 +155,7 @@ def diagnose_failure(exc: BaseException, runtime: LexiPilotRuntime | None = None
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Verify a LexiPilot Radeon dedicated endpoint.")
-    parser.add_argument("--env-file", help="Optional env file, for example ../aiagent/.env")
+    parser.add_argument("--env-file", help="Optional env file, for example .env")
     args = parser.parse_args()
     runtime: LexiPilotRuntime | None = None
     try:

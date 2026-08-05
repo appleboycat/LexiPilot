@@ -1,0 +1,362 @@
+[
+  {
+    "seq": 1,
+    "word": "abandon",
+    "first_letter": "A",
+    "page": 1,
+    "phonetic": "UK:/əˈbændən/ US:/əˈbændən/",
+    "definition": "v. 放弃；离开",
+    "source_text": ""
+  },
+  {
+    "seq": 2,
+    "word": "abate",
+    "first_letter": "A",
+    "page": 1,
+    "phonetic": "UK:/əˈbeɪt/ US:/əˈbeɪt/",
+    "definition": "v. 减弱；缓和",
+    "source_text": ""
+  },
+  {
+    "seq": 3,
+    "word": "abbey",
+    "first_letter": "A",
+    "page": 1,
+    "phonetic": "UK:/ˈæbi/ US:/ˈæbi/",
+    "definition": "n. 修道院",
+    "source_text": ""
+  },
+  {
+    "seq": 4,
+    "word": "abbreviate",
+    "first_letter": "A",
+    "page": 1,
+    "phonetic": "UK:/əˈbriːvieɪt/ US:/əˈbriːvieɪt/",
+    "definition": "v. 缩写；缩短",
+    "source_text": ""
+  },
+  {
+    "seq": 5,
+    "word": "aberrant",
+    "first_letter": "A",
+    "page": 1,
+    "phonetic": "UK:/əˈberənt/ US:/əˈberənt/",
+    "definition": "adj. 异常的；偏离常规的",
+    "source_text": ""
+  },
+  {
+    "seq": 6,
+    "word": "abhor",
+    "first_letter": "A",
+    "page": 1,
+    "phonetic": "UK:/əbˈhɔː(r)/ US:/əbˈhɔːr/",
+    "definition": "v. 痛恨；憎恶",
+    "source_text": ""
+  },
+  {
+    "seq": 7,
+    "word": "abiding",
+    "first_letter": "A",
+    "page": 1,
+    "phonetic": "UK:/əˈbaɪdɪŋ/ US:/əˈbaɪdɪŋ/",
+    "definition": "adj. 持久的；不变的",
+    "source_text": ""
+  },
+  {
+    "seq": 8,
+    "word": "abolish",
+    "first_letter": "A",
+    "page": 1,
+    "phonetic": "UK:/əˈbɒlɪʃ/ US:/əˈbɑːlɪʃ/",
+    "definition": "v. 废除；取消",
+    "source_text": ""
+  },
+  {
+    "seq": 9,
+    "word": "abrupt",
+    "first_letter": "A",
+    "page": 1,
+    "phonetic": "UK:/əˈbrʌpt/ US:/əˈbrʌpt/",
+    "definition": "adj. 突然的；唐突的",
+    "source_text": ""
+  },
+  {
+    "seq": 10,
+    "word": "absorb",
+    "first_letter": "A",
+    "page": 1,
+    "phonetic": "UK:/əbˈzɔːb/ US:/əbˈzɔːrb/",
+    "definition": "v. 吸收；理解",
+    "source_text": ""
+  },
+  {
+    "seq": 11,
+    "word": "abstract",
+    "first_letter": "A",
+    "page": 2,
+    "phonetic": "UK:/ˈæbstrækt/ US:/ˈæbstrækt/",
+    "definition": "adj. 抽象的；n. 摘要",
+    "source_text": ""
+  },
+  {
+    "seq": 12,
+    "word": "abundant",
+    "first_letter": "A",
+    "page": 2,
+    "phonetic": "UK:/əˈbʌndənt/ US:/əˈbʌndənt/",
+    "definition": "adj. 丰富的；充足的",
+    "source_text": ""
+  },
+  {
+    "seq": 13,
+    "word": "accelerate",
+    "first_letter": "A",
+    "page": 2,
+    "phonetic": "UK:/əkˈseləreɪt/ US:/əkˈseləreɪt/",
+    "definition": "v. 加速；促进",
+    "source_text": ""
+  },
+  {
+    "seq": 14,
+    "word": "accessible",
+    "first_letter": "A",
+    "page": 2,
+    "phonetic": "UK:/əkˈsesəbəl/ US:/əkˈsesəbəl/",
+    "definition": "adj. 可接近的；易理解的",
+    "source_text": ""
+  },
+  {
+    "seq": 15,
+    "word": "acclaim",
+    "first_letter": "A",
+    "page": 2,
+    "phonetic": "UK:/əˈkleɪm/ US:/əˈkleɪm/",
+    "definition": "v. 称赞；n. 赞誉",
+    "source_text": ""
+  },
+  {
+    "seq": 16,
+    "word": "accommodate",
+    "first_letter": "A",
+    "page": 2,
+    "phonetic": "UK:/əˈkɒmədeɪt/ US:/əˈkɑːmədeɪt/",
+    "definition": "v. 容纳；适应",
+    "source_text": ""
+  },
+  {
+    "seq": 17,
+    "word": "accumulate",
+    "first_letter": "A",
+    "page": 2,
+    "phonetic": "UK:/əˈkjuːmjəleɪt/ US:/əˈkjuːmjəleɪt/",
+    "definition": "v. 积累；聚集",
+    "source_text": ""
+  },
+  {
+    "seq": 18,
+    "word": "accurate",
+    "first_letter": "A",
+    "page": 2,
+    "phonetic": "UK:/ˈækjərət/ US:/ˈækjərət/",
+    "definition": "adj. 准确的；精确的",
+    "source_text": ""
+  },
+  {
+    "seq": 19,
+    "word": "adapt",
+    "first_letter": "A",
+    "page": 2,
+    "phonetic": "UK:/əˈdæpt/ US:/əˈdæpt/",
+    "definition": "v. 适应；改编",
+    "source_text": ""
+  },
+  {
+    "seq": 20,
+    "word": "adequate",
+    "first_letter": "A",
+    "page": 2,
+    "phonetic": "UK:/ˈædɪkwət/ US:/ˈædɪkwət/",
+    "definition": "adj. 足够的；合格的",
+    "source_text": ""
+  },
+  {
+    "seq": 21,
+    "word": "advocate",
+    "first_letter": "A",
+    "page": 3,
+    "phonetic": "UK:/ˈædvəkeɪt/ US:/ˈædvəkeɪt/",
+    "definition": "v. 提倡；n. 支持者",
+    "source_text": ""
+  },
+  {
+    "seq": 22,
+    "word": "aesthetic",
+    "first_letter": "A",
+    "page": 3,
+    "phonetic": "UK:/iːsˈθetɪk/ US:/esˈθetɪk/",
+    "definition": "adj. 审美的；美学的",
+    "source_text": ""
+  },
+  {
+    "seq": 23,
+    "word": "aggregate",
+    "first_letter": "A",
+    "page": 3,
+    "phonetic": "UK:/ˈæɡrɪɡət/ US:/ˈæɡrɪɡət/",
+    "definition": "n. 总数；adj. 合计的",
+    "source_text": ""
+  },
+  {
+    "seq": 24,
+    "word": "alleviate",
+    "first_letter": "A",
+    "page": 3,
+    "phonetic": "UK:/əˈliːvieɪt/ US:/əˈliːvieɪt/",
+    "definition": "v. 缓解；减轻",
+    "source_text": ""
+  },
+  {
+    "seq": 25,
+    "word": "ambiguous",
+    "first_letter": "A",
+    "page": 3,
+    "phonetic": "UK:/æmˈbɪɡjuəs/ US:/æmˈbɪɡjuəs/",
+    "definition": "adj. 模棱两可的；含糊的",
+    "source_text": ""
+  },
+  {
+    "seq": 26,
+    "word": "amplify",
+    "first_letter": "A",
+    "page": 3,
+    "phonetic": "UK:/ˈæmplɪfaɪ/ US:/ˈæmplɪfaɪ/",
+    "definition": "v. 放大；增强",
+    "source_text": ""
+  },
+  {
+    "seq": 27,
+    "word": "analyze",
+    "first_letter": "A",
+    "page": 3,
+    "phonetic": "UK:/ˈænəlaɪz/ US:/ˈænəlaɪz/",
+    "definition": "v. 分析；研究",
+    "source_text": ""
+  },
+  {
+    "seq": 28,
+    "word": "anomaly",
+    "first_letter": "A",
+    "page": 3,
+    "phonetic": "UK:/əˈnɒməli/ US:/əˈnɑːməli/",
+    "definition": "n. 异常现象；例外",
+    "source_text": ""
+  },
+  {
+    "seq": 29,
+    "word": "anticipate",
+    "first_letter": "A",
+    "page": 3,
+    "phonetic": "UK:/ænˈtɪsɪpeɪt/ US:/ænˈtɪsɪpeɪt/",
+    "definition": "v. 预期；预先考虑",
+    "source_text": ""
+  },
+  {
+    "seq": 30,
+    "word": "apparent",
+    "first_letter": "A",
+    "page": 3,
+    "phonetic": "UK:/əˈpærənt/ US:/əˈpærənt/",
+    "definition": "adj. 明显的；表面上的",
+    "source_text": ""
+  },
+  {
+    "seq": 31,
+    "word": "arbitrary",
+    "first_letter": "A",
+    "page": 4,
+    "phonetic": "UK:/ˈɑːbɪtrəri/ US:/ˈɑːrbətreri/",
+    "definition": "adj. 任意的；武断的",
+    "source_text": ""
+  },
+  {
+    "seq": 32,
+    "word": "articulate",
+    "first_letter": "A",
+    "page": 4,
+    "phonetic": "UK:/ɑːˈtɪkjəleɪt/ US:/ɑːrˈtɪkjəleɪt/",
+    "definition": "v. 清楚表达；adj. 善于表达的",
+    "source_text": ""
+  },
+  {
+    "seq": 33,
+    "word": "assess",
+    "first_letter": "A",
+    "page": 4,
+    "phonetic": "UK:/əˈses/ US:/əˈses/",
+    "definition": "v. 评估；评价",
+    "source_text": ""
+  },
+  {
+    "seq": 34,
+    "word": "coherent",
+    "first_letter": "C",
+    "page": 4,
+    "phonetic": "UK:/kəʊˈhɪərənt/ US:/koʊˈhɪrənt/",
+    "definition": "adj. 连贯的；一致的",
+    "source_text": ""
+  },
+  {
+    "seq": 35,
+    "word": "concise",
+    "first_letter": "C",
+    "page": 4,
+    "phonetic": "UK:/kənˈsaɪs/ US:/kənˈsaɪs/",
+    "definition": "adj. 简明的；精炼的",
+    "source_text": ""
+  },
+  {
+    "seq": 36,
+    "word": "exorbitant",
+    "first_letter": "E",
+    "page": 4,
+    "phonetic": "UK:/ɪɡˈzɔːbɪtənt/ US:/ɪɡˈzɔːrbɪtənt/",
+    "definition": "adj. 过高的；过分的",
+    "source_text": ""
+  },
+  {
+    "seq": 37,
+    "word": "feasible",
+    "first_letter": "F",
+    "page": 4,
+    "phonetic": "UK:/ˈfiːzəbəl/ US:/ˈfiːzəbəl/",
+    "definition": "adj. 可行的；切实可做的",
+    "source_text": ""
+  },
+  {
+    "seq": 38,
+    "word": "granular",
+    "first_letter": "G",
+    "page": 4,
+    "phonetic": "UK:/ˈɡrænjələr/ US:/ˈɡrænjələr/",
+    "definition": "adj. 颗粒状的；细致的",
+    "source_text": ""
+  },
+  {
+    "seq": 39,
+    "word": "impetus",
+    "first_letter": "I",
+    "page": 4,
+    "phonetic": "UK:/ˈɪmpɪtəs/ US:/ˈɪmpɪtəs/",
+    "definition": "n. 推动力；促进因素",
+    "source_text": ""
+  },
+  {
+    "seq": 40,
+    "word": "synthesize",
+    "first_letter": "S",
+    "page": 4,
+    "phonetic": "UK:/ˈsɪnθəsaɪz/ US:/ˈsɪnθəsaɪz/",
+    "definition": "v. 综合；合成",
+    "source_text": ""
+  }
+]

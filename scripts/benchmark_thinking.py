@@ -649,7 +649,7 @@ def print_terminal_summary(paths: dict[str, Path], results: list[BenchmarkRun], 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Benchmark LexiPilot Qwen thinking=true vs thinking=false.")
-    parser.add_argument("--env-file", help="Optional env file, for example ../aiagent/.env")
+    parser.add_argument("--env-file", help="Optional env file, for example .env")
     parser.add_argument("--runs", type=int, default=5)
     parser.add_argument("--warmups", type=int, default=1)
     parser.add_argument("--output-dir", default="benchmark_reports")

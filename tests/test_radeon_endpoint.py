@@ -18,6 +18,7 @@ RADEON_KEYS = [
     "PERFORMANCE_REPORTS_ENABLED",
     "LEXIPILOT_ENV_FILE",
 ]
+API_KEY_NAME = "RADEON_API_KEY"
 
 
 @pytest.fixture(autouse=True)
@@ -28,7 +29,7 @@ def clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def write_env(path: Path, *, key: str, base: str, model: str = "Qwen/Qwen3-8B") -> None:
     path.write_text(
-        f"RADEON_API_KEY={key}\n"
+        f"{API_KEY_NAME}={key}\n"
         f"RADEON_BASE_URL={base}\n"
         f"RADEON_MODEL={model}\n"
         "ENDPOINT_TYPE=dedicated\n"
@@ -51,7 +52,7 @@ def test_explicit_env_file_uses_adjacent_env_local_override(tmp_path: Path) -> N
     env_file = tmp_path / ".env"
     write_env(env_file, key="", base="")
     (tmp_path / ".env.local").write_text(
-        "RADEON_API_KEY=local-secret\n"
+        f"{API_KEY_NAME}=local-secret\n"
         "RADEON_BASE_URL=https://local-override.example\n"
         "RADEON_MODEL=Qwen/Qwen3-8B\n",
         encoding="utf-8",
@@ -66,7 +67,7 @@ def test_env_local_does_not_override_process_environment(monkeypatch: pytest.Mon
     env_file = tmp_path / ".env"
     write_env(env_file, key="", base="")
     (tmp_path / ".env.local").write_text(
-        "RADEON_API_KEY=local-secret\n"
+        f"{API_KEY_NAME}=local-secret\n"
         "RADEON_BASE_URL=https://local-override.example\n",
         encoding="utf-8",
     )

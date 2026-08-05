@@ -6,7 +6,7 @@ Static vocabulary applications do not adapt to a learner's real review history, 
 
 ## Solution
 
-LexiPilot lets the learner describe a study goal in natural language. The Agent reads long-term learner memory, checks due reviews and frequently missed words, plans an adaptive session, records explicit answers through spaced repetition, supports etymology lookup, and generates mistake-driven bilingual practice material.
+LexiPilot lets the learner describe a study goal in natural language. Qwen3-8B selects read-only learner-state tools and returns a structured plan. LexiPilot validates every selected word before a deterministic controller records explicit answers through spaced repetition, supports etymology lookup, and generates mistake-driven bilingual practice material.
 
 The final demo uses a dedicated AMD Radeon Cloud endpoint serving `Qwen/Qwen3-8B` through an OpenAI-compatible vLLM API.
 
@@ -25,6 +25,8 @@ goal understanding
 ```
 
 It is grounded in real tools and persistent learner state rather than static prompts.
+
+LexiPilot uses a hybrid Agent architecture. Qwen3-8B performs structured Tool Calling and generates a validated study plan. A deterministic session controller safely handles interactive answers, spaced repetition, and persistent learner-state updates. Model-planning failures fall back to the deterministic planner without aborting the demo.
 
 ## Radeon Optimization
 
@@ -48,6 +50,8 @@ The final non-mock benchmark used one warm-up and five measured requests per mod
 Disabling thinking did not improve planning latency in this sample: the median regressed by 0.29%, with identical Tool Calling reliability. It reduced median bilingual-generation latency by 6.98% and increased median client-observed completion tokens/s by 7.50%, with no change in median completion tokens. LexiPilot therefore uses `QWEN_ENABLE_THINKING=false` for the final demo.
 
 These client-observed measurements include network, endpoint, scheduling, and serving overhead. They are not raw GPU or kernel throughput. Each aggregate contains five measured requests, so the result describes this sample rather than a guaranteed performance improvement.
+
+Sanitized benchmark source: `docs/benchmark_results/thinking_benchmark.md`.
 
 ## Privacy
 

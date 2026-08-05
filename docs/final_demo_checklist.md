@@ -18,7 +18,7 @@
 2. Show Radeon endpoint verification.
 3. Show real default-profile status.
 4. Enter the natural-language goal.
-5. Show tool timeline.
+5. Show `[AGENT]`, `[MODEL TOOL]`, `[MODEL PLAN]`, and `[CONTROLLER]` in the hybrid timeline.
 6. Answer one correct and one incorrect.
 7. Request etymology.
 8. Show adaptive generated passage.
@@ -35,4 +35,3 @@
 - Confirm all links work.
 - Confirm README numbers match benchmark JSON.
 - Confirm no mock data is presented as real data.
-

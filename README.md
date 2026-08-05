@@ -12,24 +12,49 @@ LexiPilot is for learners who want private, adaptive academic vocabulary review 
 
 ## Solution
 
-LexiPilot keeps the existing `vocab_trainer.py` vocabulary engine and adds a thin Agent layer around it. The Agent reads real learner state, plans a focused session, records explicit answers, adapts after mistakes, and generates personalized practice material.
+LexiPilot keeps the existing `vocab_trainer.py` vocabulary engine and adds a hybrid Agent layer around it. Qwen3-8B selects read-only learner-state tools and returns a validated study plan. A deterministic controller then presents cards, records explicit answers, applies spaced repetition, adapts after mistakes, and finalizes the session exactly once.
+
+## Quickstart
+
+A fresh clone can run with the committed sample vocabulary data and a generated synthetic profile. The private source PDF and real learner history are not required.
+
+```bash
+git clone git@github.com:appleboycat/LexiPilot.git
+cd LexiPilot
+
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -r requirements.txt
+
+cp .env.example .env
+# Fill in the Radeon endpoint configuration.
+
+python3 scripts/setup_demo_data.py
+
+FORCE_COLOR=1 python3 lexipilot.py \
+  --demo \
+  --env-file .env \
+  --debug
+```
 
 ## Why This Is an Agent
 
-LexiPilot accepts a natural-language learning objective, uses tools to inspect real learner data, chooses actions, updates memory only after explicit learner answers, generates practice material, saves progress, and reports what happened. It is more than a chat wrapper because its responses are grounded in tool calls and persistent learner state.
+LexiPilot accepts a natural-language learning objective and uses Qwen3-8B Tool Calling to inspect real learner state and propose a structured plan. The application validates that every selected word came from tool results, then hands execution to a deterministic controller. It is more than a chat wrapper because model decisions are grounded in tools and become an executable session backed by persistent learner memory.
 
 ## Agent Workflow
 
-1. Read the learner profile summary.
-2. Inspect due reviews.
-3. Inspect frequently missed words.
-4. Estimate session size from the user's time limit.
-5. Prefer due and high-missed words before new words.
-6. Present a practical plan with selection reasons.
-7. Guide review cards with `y`, `n`, `etymology`, `skip`, and `stop`.
-8. Record explicit answers through spaced repetition.
-9. Generate an academic-style passage from priority words.
-10. Save progress, session summary, and a privacy-safe performance report.
+```text
+Natural-language learning goal
+→ Qwen3-8B model planning
+→ model-selected read-only Tool Calling
+→ validated structured study plan
+→ deterministic interactive session controller
+→ explicit answer recording
+→ spaced-repetition persistence
+→ model-backed practice generation
+```
+
+During planning, the model can inspect the profile summary, due reviews, missed words, new words, and individual word details. It cannot record answers or save a session. Write tools become available only through deterministic controller actions after explicit learner input.
 
 ## Tool Calling
 
@@ -46,15 +71,48 @@ LexiPilot exposes OpenAI-compatible function tools:
 - `get_words_by_page`
 - `save_session_summary`
 
-The model loop preserves `tool_choice="auto"` and supports parallel tool calls.
+Planning exposes only `get_profile_summary`, `get_due_words`, `get_missed_words`, `get_new_words`, and `get_word_details`. On a dedicated endpoint, the first planning request uses `tool_choice="required"` so Qwen immediately selects one or more of those read-only tools instead of returning preliminary prose; parallel tool calls remain supported. General Agent requests and shared endpoints keep `tool_choice="auto"`. `record_answer` and `save_session_summary` are never exposed during planning.
 
 ## Adaptive Session Planning
 
-The deterministic CLI planner estimates a reasonable session size from the user's stated time limit, prioritizes due and frequently missed words, and adds new words only when there is space. The OpenAI-compatible model loop can also use the same tools when a dedicated endpoint is configured.
+With a configured dedicated endpoint, model-driven planning is the default. The returned JSON plan is accepted only when all words came from read-only tool results, due and missed words are prioritized, no word is invented, and the requested time and practical word limit are respected.
+
+If the endpoint times out, authentication fails, Tool Calling is malformed, JSON is invalid, or the plan fails validation, LexiPilot prints a concise warning and immediately uses the existing deterministic planner. Use `--deterministic` to bypass model planning explicitly. `--model-loop` remains only as a deprecated compatibility flag and is no longer required.
+
+`run.sh` keeps hybrid model planning as the default. For an immediate local plan during routine study, use:
+
+```bash
+LEXIPILOT_DETERMINISTIC=1 ./run.sh
+```
+
+This skips only model planning. Answer recording, spaced repetition, persistence, and practice generation continue to use the normal controller and configured generation path.
 
 ## Long-Term Learner Memory
 
 Progress remains in the existing `.vocab_progress/<profile>/progress.json` format. LexiPilot does not rename profile directories or migrate progress files. Session records are concise JSONL entries and do not include complete prompts, full model responses, credentials, or complete progress files.
+
+## Reproducible Sample Data
+
+`examples/sample_vocab_index.json` contains 40 deterministic demo entries with independently written concise definitions and empty `source_text` fields. It contains no personal progress, credentials, or copied PDF lines. `scripts/setup_demo_data.py` creates an ignored synthetic profile with 12 started words, seven reviews due relative to the current date, four historically missed words, unlearned vocabulary, and several days of sample activity.
+
+Use explicit paths when integrating another permitted vocabulary source:
+
+```bash
+python3 lexipilot.py \
+  --index-file examples/sample_vocab_index.json \
+  --progress-root .demo_data/profiles \
+  --profile demo \
+  --env-file .env \
+  --debug
+```
+
+Validate an index without printing its vocabulary content:
+
+```bash
+python3 scripts/validate_vocab_index.py examples/sample_vocab_index.json
+```
+
+The private source PDF, generated CSV files, complete local `.vocab_index.json`, real profiles, and backups remain excluded from Git. The full local index is not treated as redistributable project data.
 
 ## Spaced Repetition
 
@@ -86,10 +144,10 @@ FORCE_COLOR=1 python3 lexipilot.py
 ## Architecture
 
 `lexipilot.py`  
-CLI and interactive learning session.
+CLI, path selection, and interactive learning session.
 
 `lexipilot_core.py`  
-Model client, Agent loop, session planning, adaptation, and performance reporting orchestration.
+Read-only model Tool Calling, strict plan validation, deterministic session control, adaptation, and performance reporting orchestration.
 
 `lexipilot_tools.py`  
 Vocabulary, learner-memory, review, answer, etymology, material-generation, configuration, and report tools.
@@ -169,10 +227,10 @@ Run the real benchmark only after endpoint verification passes:
 
 ```bash
 python3 scripts/test_radeon_endpoint.py \
-  --env-file ../aiagent/.env
+  --env-file .env
 
 FORCE_COLOR=1 python3 scripts/benchmark_thinking.py \
-  --env-file ../aiagent/.env \
+  --env-file .env \
   --warmups 1 \
   --runs 5
 ```
@@ -202,7 +260,7 @@ The final benchmark ran on August 5, 2026 against the dedicated endpoint with on
 
 Disabling thinking produced no clear planning improvement in this sample: median planning latency regressed by 0.29%, while Tool Calling reliability remained 100% in both modes. For bilingual generation, it reduced median latency by 6.98% and increased median client-observed completion tokens/s by 7.50%; completion-token counts were unchanged. Because the sample contains only five measured requests per group and the disabled-mode generation P95 was higher, these results should be treated as observed client-level behavior rather than a hardware-level speedup. LexiPilot uses `QWEN_ENABLE_THINKING=false` for the final demo because it preserved validation reliability and improved the median generation result.
 
-Source report: `benchmark_reports/thinking_20260805_230647/summary.md`.
+Source report: [docs/benchmark_results/thinking_benchmark.md](docs/benchmark_results/thinking_benchmark.md).
 
 ## Installation
 
@@ -216,8 +274,8 @@ Create a local `.env` or point LexiPilot at an existing env file:
 
 ```bash
 python3 lexipilot.py \
-  --profile demo_alice \
-  --env-file ../aiagent/.env \
+  --demo \
+  --env-file .env \
   --debug
 ```
 
@@ -226,7 +284,7 @@ Configuration precedence:
 1. Existing process environment variables
 2. Explicit `--env-file` or `LEXIPILOT_ENV_FILE`
 3. Local `.env`
-4. `../aiagent/.env` fallback when required Radeon values are missing
+4. Optional sibling `../aiagent/.env` fallback when required Radeon values are missing
 5. Safe defaults
 
 Required keys:
@@ -248,25 +306,40 @@ extra_body={"chat_template_kwargs": {"enable_thinking": False}}
 
 This dedicated-vLLM field is not sent to shared endpoints.
 
+For local development only, an existing sibling configuration can still be selected explicitly with `--env-file ../aiagent/.env`. Public quickstart and demo commands use the repository-local `.env`.
+
 ## Demo
 
 Verify the Radeon endpoint:
 
 ```bash
 python3 scripts/test_radeon_endpoint.py \
-  --env-file ../aiagent/.env
+  --env-file .env
 ```
 
-Run the CLI:
+Run the reproducible sample-data hybrid Agent:
 
 ```bash
-python3 lexipilot.py \
-  --profile default \
-  --env-file ../aiagent/.env \
+python3 scripts/setup_demo_data.py
+
+FORCE_COLOR=1 python3 lexipilot.py \
+  --demo \
+  --env-file .env \
   --debug
 ```
 
-For a write-enabled demo using the real long-term learner profile, create a backup first:
+The debug timeline distinguishes model and controller responsibility:
+
+```text
+[AGENT] Requesting a model-generated study plan
+[MODEL TOOL] get_profile_summary
+[MODEL TOOL] get_due_words
+[MODEL TOOL] get_missed_words
+[MODEL PLAN] 6 reviews, 1 new word
+[CONTROLLER] Starting the interactive study session
+```
+
+For a write-enabled demo using an existing real long-term learner profile, create a backup first:
 
 ```bash
 python3 scripts/backup_default_profile.py
@@ -277,7 +350,7 @@ Or let the CLI create one before study:
 ```bash
 FORCE_COLOR=1 python3 lexipilot.py \
   --profile default \
-  --env-file ../aiagent/.env \
+  --env-file .env \
   --backup-profile \
   --debug
 ```
@@ -320,6 +393,9 @@ python3 -m py_compile \
   lexipilot_tools.py \
   console_theme.py \
   scripts/smoke_lexipilot.py \
+  scripts/smoke_fresh_clone.py \
+  scripts/setup_demo_data.py \
+  scripts/validate_vocab_index.py \
   scripts/test_radeon_endpoint.py \
   scripts/benchmark_thinking.py \
   scripts/show_latest_performance.py \
@@ -337,11 +413,13 @@ Run the model-free smoke test:
 
 ```bash
 python3 scripts/smoke_lexipilot.py
+python3 scripts/smoke_fresh_clone.py
+python3 scripts/validate_vocab_index.py examples/sample_vocab_index.json
 ```
 
 ## Limitations
 
-The MVP is intentionally CLI-first and does not include a GUI. Etymonline lookup requires network access when used interactively. The deterministic planner is used for the main interactive CLI flow; the OpenAI-compatible model tool loop is available with `--model-loop`.
+The MVP is intentionally CLI-first and does not include a GUI. Etymonline lookup requires network access when used interactively. Model planning requires a compatible endpoint with structured Tool Calling; deterministic fallback keeps the session usable when that dependency is unavailable. The committed sample index is intentionally small and does not replace the user's full vocabulary source.
 
 ## Roadmap
 

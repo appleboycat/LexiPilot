@@ -34,6 +34,10 @@ class ConsoleTheme:
 
     def label(self, name: str) -> str:
         palette = {
+            "AGENT": "1",
+            "MODEL TOOL": "2",
+            "MODEL PLAN": "1",
+            "CONTROLLER": "1",
             "PLAN": "1",
             "TOOL": "2",
             "SELECTED": "1",
@@ -51,6 +55,9 @@ class ConsoleTheme:
 
     def event_text(self, name: str, text: str) -> str:
         palette = {
+            "AGENT": "2",
+            "MODEL PLAN": "2",
+            "CONTROLLER": "2",
             "PLAN": "2",
             "SELECTED": "2",
             "ADAPT": "2",
@@ -139,6 +146,18 @@ class Console:
     def plan(self, message: str) -> None:
         self.event("PLAN", message)
 
+    def agent(self, message: str) -> None:
+        self.event("AGENT", message)
+
+    def model_tool(self, name: str) -> None:
+        print(self.theme.dim(f"[MODEL TOOL] {name}"))
+
+    def model_plan(self, message: str) -> None:
+        self.event("MODEL PLAN", message)
+
+    def controller(self, message: str) -> None:
+        self.event("CONTROLLER", message)
+
     def tool(self, name: str) -> None:
         print(self.theme.dim(f"[TOOL] {name}"))
 
@@ -159,6 +178,9 @@ class Console:
 
     def status(self, message: str) -> None:
         self.event("STATUS", message)
+
+    def warning(self, message: str) -> None:
+        self.event("WARNING", message)
 
     def profile_status(self, summary: dict[str, object], runtime_summary: dict[str, str] | None = None) -> None:
         total = int(summary.get("total_vocabulary_count", 0) or 0)

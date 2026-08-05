@@ -30,7 +30,10 @@ User Goal
 
 ```text
 LexiPilot CLI
-→ Agent Core
+→ Hybrid Agent Core
+  → Qwen read-only Tool Calling
+  → Validated Study Plan
+  → Deterministic Session Controller
 → Vocabulary Tools
 → Learner Progress
 
@@ -67,7 +70,7 @@ Observed result:
 
 Measurement disclaimer: results include client, network, endpoint, scheduling, and serving overhead. They are not raw GPU kernel throughput.
 
-Manual visual: insert a screenshot of `benchmark_reports/thinking_20260805_230647/summary.md` or the terminal benchmark summary.
+Manual visual: insert a screenshot of `docs/benchmark_results/thinking_benchmark.md` or the terminal benchmark summary.
 
 ## Slide 6 — Demo and Results
 

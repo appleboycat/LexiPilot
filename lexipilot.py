@@ -7,11 +7,14 @@ import argparse
 import re
 import sys
 import time
+from pathlib import Path
 
 from console_theme import Console, ConsoleTheme
-from lexipilot_core import LexiPilotAgent, SessionPhase, is_internal_control_only, run_tool_call_loop
+from lexipilot_core import LexiPilotAgent, SessionPhase, is_internal_control_only
 from lexipilot_tools import ConfigError, LexiPilotRuntime, LexiPilotToolbox, load_lexipilot_env
 from scripts.backup_default_profile import backup_default_profile
+
+REPO_ROOT = Path(__file__).resolve().parent
 
 
 def print_banner(profile: str, runtime: LexiPilotRuntime, console: Console) -> None:
@@ -61,15 +64,44 @@ def looks_like_new_study_request(text: str) -> bool:
     return any(phrase in lowered for phrase in ("give me", "review", "study", "focus on", "practice words"))
 
 
+def resolve_data_paths(args: argparse.Namespace) -> tuple[str, Path | None, Path | None]:
+    profile = args.profile or ("demo" if args.demo else "default")
+    index_path = Path(args.index_file).expanduser() if args.index_file else None
+    progress_root = Path(args.progress_root).expanduser() if args.progress_root else None
+    if args.demo:
+        index_path = index_path or REPO_ROOT / "examples" / "sample_vocab_index.json"
+        progress_root = progress_root or REPO_ROOT / ".demo_data" / "profiles"
+    return profile, index_path, progress_root
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="LexiPilot private adaptive vocabulary learning agent.")
-    parser.add_argument("--profile", default="default", help="Learner profile name")
-    parser.add_argument("--env-file", help="Optional env file, for example ../aiagent/.env")
+    parser.add_argument("--profile", help="Learner profile name (default: default, or demo with --demo)")
+    parser.add_argument("--env-file", help="Optional environment file (public default: .env)")
+    parser.add_argument("--index-file", help="Explicit vocabulary index JSON path")
+    parser.add_argument("--progress-root", help="Explicit learner-profile root directory")
+    parser.add_argument("--demo", action="store_true", help="Use the reproducible sample vocabulary and synthetic demo profile")
+    parser.add_argument("--deterministic", action="store_true", help="Bypass model planning and use the deterministic planner")
     parser.add_argument("--debug", action="store_true", help="Show concise tool timeline")
     parser.add_argument("--no-color", action="store_true", help="Disable terminal colors")
     parser.add_argument("--backup-profile", action="store_true", help="Back up the default profile before recording answers")
-    parser.add_argument("--model-loop", action="store_true", help="Use the OpenAI-compatible model tool-calling loop for one request")
+    parser.add_argument(
+        "--model-loop",
+        action="store_true",
+        help="Deprecated compatibility alias; hybrid model planning is now the default",
+    )
     args = parser.parse_args()
+    profile, index_path, progress_root = resolve_data_paths(args)
+
+    if args.demo:
+        from scripts.setup_demo_data import setup_demo_data
+
+        assert index_path is not None and progress_root is not None
+        demo_progress = progress_root / profile / "progress.json"
+        if not demo_progress.exists():
+            setup_demo_data(index_path=index_path, progress_root=progress_root, profile=profile)
+    if index_path is not None and not index_path.exists():
+        raise SystemExit(f"Vocabulary index not found: {index_path}")
 
     try:
         load_lexipilot_env(args.env_file)
@@ -77,18 +109,35 @@ def main() -> None:
     except ConfigError as exc:
         raise SystemExit(f"Configuration error: {exc}") from exc
     console = Console(ConsoleTheme(enabled=False if args.no_color else None))
-    toolbox = LexiPilotToolbox(runtime=runtime)
-    agent = LexiPilotAgent(args.profile, toolbox, debug=args.debug, console=console)
-    print_banner(args.profile, runtime, console)
+    toolbox = LexiPilotToolbox(
+        index_path=index_path,
+        progress_dir=progress_root,
+        state_file=(progress_root / ".legacy_state.json") if progress_root is not None else None,
+        report_dir=(REPO_ROOT / ".demo_data" / "performance_reports") if args.demo else None,
+        material_dir=(REPO_ROOT / ".demo_data" / "materials") if args.demo else None,
+        runtime=runtime,
+    )
+    agent = LexiPilotAgent(
+        profile,
+        toolbox,
+        debug=args.debug,
+        console=console,
+        deterministic=args.deterministic,
+    )
+    print_banner(profile, runtime, console)
     backed_up = False
-    if args.profile == "default":
+    real_default = (
+        profile == "default"
+        and (progress_root is None or progress_root.resolve() == (REPO_ROOT / ".vocab_progress").resolve())
+    )
+    if real_default:
         console.status("Using existing learner profile: default")
         console.status("A backup is recommended before recording answers.")
         if args.backup_profile:
             path = backup_default_profile()
             backed_up = True
             console.saved(f"Default profile backup: {path}")
-    print_profile_status(args.profile, toolbox, console, runtime, debug=args.debug)
+    print_profile_status(profile, toolbox, console, runtime, debug=args.debug)
 
     while True:
         try:
@@ -109,24 +158,17 @@ def main() -> None:
             print("Session reset.")
             continue
         if text == "/status":
-            print_profile_status(args.profile, toolbox, console, runtime, debug=args.debug)
+            print_profile_status(profile, toolbox, console, runtime, debug=args.debug)
             continue
         if should_start_new_request_after_completion(agent, text):
             agent.session = None
         elif agent.session is not None and looks_like_new_study_request(text):
             console.status("Starting a new study request.")
             agent.session = None
-        if args.model_loop and agent.session is None:
-            try:
-                print_response(run_tool_call_loop(toolbox, args.profile, text, debug=args.debug))
-            except Exception as exc:
-                console.error(f"Model tool loop unavailable; falling back to deterministic session planner. {exc}")
-                print_response(agent.plan(text))
-            continue
         if agent.session is None:
             print_response(agent.plan(text))
         else:
-            if args.profile == "default" and args.backup_profile and not backed_up:
+            if real_default and args.backup_profile and not backed_up:
                 path = backup_default_profile()
                 backed_up = True
                 console.saved(f"Default profile backup: {path}")

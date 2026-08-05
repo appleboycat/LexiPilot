@@ -20,6 +20,7 @@ new48_ch_print_pagenum.pdf
 *.tmp
 demo_output/
 test_output/
+.demo_data/
 models/
 *.safetensors
 *.bin

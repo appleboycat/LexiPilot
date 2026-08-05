@@ -295,6 +295,7 @@ class LexiPilotRuntime:
     prompt_tokens: int = 0
     completion_tokens: int = 0
     story_generation_duration: float = 0.0
+    radeon_planning_succeeded: bool = False
     radeon_story_succeeded: bool = False
 
     def dedicated_extra_body(self) -> dict[str, Any] | None:
@@ -739,6 +740,7 @@ class LexiPilotToolbox:
             "tool_durations": self.tool_events,
             "story_generation_duration": self.runtime.story_generation_duration,
             "final_session_state": final_session_state,
+            "radeon_planning_succeeded": self.runtime.radeon_planning_succeeded,
             "radeon_inference_succeeded": self.runtime.radeon_story_succeeded,
         }
         path = self.report_dir / f"lexipilot_{int(time.time())}_{uuid.uuid4().hex[:8]}.json"
@@ -768,6 +770,26 @@ def openai_tool_schemas() -> list[dict[str, Any]]:
         tool("generate_practice_story", "Generate personalized academic vocabulary practice material.", {"profile": {"type": "string"}, "words": {"type": "array", "items": {"type": "string"}}, "style": {"type": "string"}, "include_translation": {"type": "boolean"}}, ["profile", "words"]),
         tool("get_words_by_page", "Return vocabulary entries from a PDF page.", {"page": {"type": "integer"}}, ["page"]),
         tool("save_session_summary", "Persist a concise privacy-safe session summary.", {}, []),
+    ]
+
+
+PLANNING_TOOL_NAMES = frozenset(
+    {
+        "get_profile_summary",
+        "get_due_words",
+        "get_missed_words",
+        "get_new_words",
+        "get_word_details",
+    }
+)
+
+
+def planning_tool_schemas() -> list[dict[str, Any]]:
+    """Return the read-only tools permitted during model planning."""
+    return [
+        schema
+        for schema in openai_tool_schemas()
+        if schema.get("function", {}).get("name") in PLANNING_TOOL_NAMES
     ]
 
 
