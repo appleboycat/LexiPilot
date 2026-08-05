@@ -160,7 +160,7 @@ class Console:
     def status(self, message: str) -> None:
         self.event("STATUS", message)
 
-    def profile_status(self, summary: dict[str, object]) -> None:
+    def profile_status(self, summary: dict[str, object], runtime_summary: dict[str, str] | None = None) -> None:
         total = int(summary.get("total_vocabulary_count", 0) or 0)
         started = int(summary.get("started_word_count", 0) or 0)
         progress_ratio = (started / total) if total > 0 else 0.0
@@ -177,6 +177,13 @@ class Console:
             ("Current position", str(summary.get("current_new_word_position", 0))),
             ("Recent activity", f"{len(summary.get('recent_study_statistics', {}) or {})} days"),
         ]
+        if runtime_summary:
+            rows.extend(
+                [
+                    ("Model", runtime_summary.get("model", "")),
+                    ("Endpoint", runtime_summary.get("endpoint", "")),
+                ]
+            )
         self.box("LexiPilot Status", rows)
 
     def box(self, title: str, rows: list[tuple[str, str]], width: int = 78) -> None:

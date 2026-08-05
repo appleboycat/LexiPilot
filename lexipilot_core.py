@@ -159,6 +159,7 @@ def render_plan_word_table(words: list[dict[str, Any]], theme: ConsoleTheme | No
         rows.append(
             {
                 "index": f"{index}.",
+                "state": stage_badge(word.get("review_stage", 0)),
                 "word": str(word.get("word", "")),
                 "pos": pos,
                 "phonetic": normalize_display_phonetic(str(word.get("phonetic", ""))),
@@ -170,18 +171,20 @@ def render_plan_word_table(words: list[dict[str, Any]], theme: ConsoleTheme | No
         return []
 
     index_width = max(len("No."), *(len(row["index"]) for row in rows))
+    state_width = max(len("State"), *(len(row["state"]) for row in rows))
     word_width = max(12, min(16, max(len("Word"), *(len(row["word"]) for row in rows))))
     pos_width = max(5, min(8, max(len("POS"), *(len(row["pos"]) for row in rows))))
     phonetic_width = max(18, min(34, max(len("Phonetic"), *(len(row["phonetic"]) for row in rows))))
     header = (
         f"{'No.':<{index_width}}  "
+        f"{'State':<{state_width}}  "
         f"{'Word':<{word_width}}  "
         f"{'POS':<{pos_width}}  "
         f"{'Phonetic':<{phonetic_width}}  "
         "Reason"
     )
     lines = [theme.dim(header) if theme else header]
-    meaning_indent = index_width + 2 + word_width + 2 + pos_width + 2
+    meaning_indent = index_width + 2 + state_width + 2 + word_width + 2 + pos_width + 2
     for row in rows:
         rendered_word = theme.word(row["word"]) if theme else row["word"]
         rendered_pos = theme.pos(row["pos"]) if theme else row["pos"]
@@ -190,6 +193,7 @@ def render_plan_word_table(words: list[dict[str, Any]], theme: ConsoleTheme | No
         reason = f"({row['reason']})" if row["reason"] else ""
         lines.append(
             f"{visible_ljust(row['index'], index_width)}  "
+            f"{visible_ljust(row['state'], state_width)}  "
             f"{visible_ljust(rendered_word, word_width)}  "
             f"{visible_ljust(rendered_pos, pos_width)}  "
             f"{visible_ljust(rendered_phonetic, phonetic_width)}  "
@@ -626,11 +630,20 @@ def render_card(word: dict[str, Any], index: int, total: int, theme: ConsoleThem
 
 
 def stage_marks(stage: int | str) -> str:
+    return "Stage: " + stage_badge(stage)
+
+
+def stage_badge(stage: int | str) -> str:
+    return f"|{stage_bar(stage)}|"
+
+
+def stage_bar(stage: int | str, width: int = 5) -> str:
     try:
         count = int(stage)
     except (TypeError, ValueError):
         count = 0
-    return "Stage: " + "-" * max(1, count)
+    count = max(0, min(width, count))
+    return "+" * count + "-" * (width - count)
 
 
 def render_material(material: dict[str, Any], theme: ConsoleTheme) -> str:
@@ -643,6 +656,10 @@ def render_material(material: dict[str, Any], theme: ConsoleTheme) -> str:
         str(word): str(value)
         for word, value in (material.get("target_parts_of_speech") or {}).items()
     }
+    target_review_stages = {
+        str(word): value
+        for word, value in (material.get("target_review_stages") or {}).items()
+    }
     target_translations = {
         str(word): [str(item) for item in values]
         for word, values in (material.get("target_translations") or {}).items()
@@ -654,7 +671,7 @@ def render_material(material: dict[str, Any], theme: ConsoleTheme) -> str:
     }
     english = highlight_english_terms(str(material.get("english_passage") or material.get("english") or ""), target_words, theme)
     chinese = highlight_chinese_terms(str(material.get("chinese_translation") or material.get("chinese") or ""), target_translations, theme)
-    mappings = render_vocabulary_mapping(target_words, target_phonetics, target_parts_of_speech, target_translations, theme)
+    mappings = render_vocabulary_mapping(target_words, target_phonetics, target_parts_of_speech, target_review_stages, target_translations, theme)
     parts = [
         "Let's focus on the words that need the most reinforcement, then use them in context.",
     ]
@@ -686,6 +703,7 @@ def render_vocabulary_mapping(
     target_words: list[str],
     target_phonetics: dict[str, str],
     target_parts_of_speech: dict[str, str],
+    target_review_stages: dict[str, Any],
     target_translations: dict[str, list[str]],
     theme: ConsoleTheme,
 ) -> str:
@@ -696,20 +714,23 @@ def render_vocabulary_mapping(
         meaning = "；".join(phrases)
         meaning_with_pos = f"{pos} {meaning}".strip()
         if meaning or target_phonetics.get(word):
-            rows.append((word, normalize_display_phonetic(target_phonetics.get(word, "")), meaning_with_pos))
+            rows.append((stage_badge(target_review_stages.get(word, 0)), word, normalize_display_phonetic(target_phonetics.get(word, "")), meaning_with_pos))
     if not rows:
         return ""
 
-    word_width = max(len("Word"), *(len(row[0]) for row in rows))
-    phonetic_width = max(len("Phonetic"), *(len(row[1]) for row in rows))
+    state_width = max(len("State"), *(len(row[0]) for row in rows))
+    word_width = max(len("Word"), *(len(row[1]) for row in rows))
+    phonetic_width = max(len("Phonetic"), *(len(row[2]) for row in rows))
     header = (
+        f"{visible_ljust(theme.dim('State'), state_width)}  "
         f"{visible_ljust(theme.dim('Word'), word_width)}  "
         f"{visible_ljust(theme.dim('Phonetic'), phonetic_width)}  "
         f"{theme.dim('Chinese meaning')}"
     )
     lines = [header]
-    for word, phonetic, meaning in rows:
+    for state, word, phonetic, meaning in rows:
         lines.append(
+            f"{visible_ljust(theme.dim(state), state_width)}  "
             f"{visible_ljust(theme.word(word), word_width)}  "
             f"{visible_ljust(theme.phonetic(phonetic), phonetic_width)}  "
             f"{theme.chinese_target(meaning)}"

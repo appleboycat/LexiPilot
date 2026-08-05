@@ -28,11 +28,18 @@ def print_response(text: str) -> None:
         print(text)
 
 
-def print_profile_status(profile: str, toolbox: LexiPilotToolbox, console: Console, *, debug: bool = False) -> None:
+def print_profile_status(
+    profile: str,
+    toolbox: LexiPilotToolbox,
+    console: Console,
+    runtime: LexiPilotRuntime,
+    *,
+    debug: bool = False,
+) -> None:
     if debug:
         console.tool("get_profile_summary")
     summary = toolbox.get_profile_summary(profile)
-    console.profile_status(summary)
+    console.profile_status(summary, {"model": runtime.model_name, "endpoint": runtime.endpoint_type})
 
 
 POST_COMPLETION_STUDY_INPUTS = {"y", "yes", "n", "no", "e", "etymology", "s", "skip", "stop"}
@@ -81,7 +88,7 @@ def main() -> None:
             path = backup_default_profile()
             backed_up = True
             console.saved(f"Default profile backup: {path}")
-    print_profile_status(args.profile, toolbox, console, debug=args.debug)
+    print_profile_status(args.profile, toolbox, console, runtime, debug=args.debug)
 
     while True:
         try:
@@ -102,7 +109,7 @@ def main() -> None:
             print("Session reset.")
             continue
         if text == "/status":
-            print_profile_status(args.profile, toolbox, console, debug=args.debug)
+            print_profile_status(args.profile, toolbox, console, runtime, debug=args.debug)
             continue
         if should_start_new_request_after_completion(agent, text):
             agent.session = None

@@ -610,6 +610,11 @@ class LexiPilotToolbox:
             target_parts_of_speech = {
                 str(entry["word"]): _entry_pos(entry) for entry in entries
             }
+            state = self.load_state(profile)
+            target_review_stages = {
+                str(entry["word"]): int(state.get("cards", {}).get(str(entry["seq"]), {}).get("stage", 0))
+                for entry in entries
+            }
             target_translations = {
                 str(entry["word"]): chinese_phrases_for_entry(entry) for entry in entries
             }
@@ -620,6 +625,7 @@ class LexiPilotToolbox:
                 "target_words": target_words,
                 "target_phonetics": target_phonetics,
                 "target_parts_of_speech": target_parts_of_speech,
+                "target_review_stages": target_review_stages,
                 "target_translations": target_translations,
                 "english_passage": generated.get("english", ""),
                 "chinese_translation": generated.get("chinese", "") if include_translation else "",

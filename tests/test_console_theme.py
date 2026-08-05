@@ -111,7 +111,8 @@ def test_profile_status_multiline_progress(capsys) -> None:
             "total_incorrect_answers": 42,
             "current_new_word_position": 900,
             "recent_study_statistics": {"2026-08-01": {}, "2026-08-02": {}},
-        }
+        },
+        {"model": "Qwen/Qwen3-8B", "endpoint": "dedicated"},
     )
     output = capsys.readouterr().out
     assert "╭" in output
@@ -121,3 +122,5 @@ def test_profile_status_multiline_progress(capsys) -> None:
     assert "Progress:" in output and "[█████░░░░░░░░░░░░░░░] 25.0%" in output
     assert "Due today:" in output and "120" in output
     assert "Recent activity:" in output and "2 days" in output
+    assert "Model:" in output and "Qwen/Qwen3-8B" in output
+    assert "Endpoint:" in output and "dedicated" in output

@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from console_theme import Console, ConsoleTheme, strip_ansi
-from lexipilot_core import LexiPilotAgent, SessionState, final_summary_lines, format_plan, priority_reasons_for_session, priority_words_for_session, render_card, render_material, stage_marks
+from lexipilot_core import LexiPilotAgent, SessionState, final_summary_lines, format_plan, priority_reasons_for_session, priority_words_for_session, render_card, render_material, stage_badge, stage_marks
 from lexipilot_tools import LexiPilotToolbox
 from tests.test_lexipilot_tools import toolbox  # noqa: F401
 
@@ -186,6 +186,7 @@ def test_render_material_highlights_without_saving_codes() -> None:
         "target_words": ["abhor"],
         "target_phonetics": {"abhor": "英:/əb'hɔː(r)/ 美:/əb'hɔːr/"},
         "target_parts_of_speech": {"abhor": "vt."},
+        "target_review_stages": {"abhor": 2},
         "target_translations": {"abhor": ["痛恨", "憎恶"]},
         "priority_reasons": {"abhor": "missed in this session"},
         "english_passage": "The faculty abhorred waste.",
@@ -198,12 +199,11 @@ def test_render_material_highlights_without_saving_codes() -> None:
     assert "Let's focus on the words that need the most reinforcement" in plain
     assert "Why these words:" in plain
     assert "abhor  missed in this session" in plain
-    assert "Meaning review:" in plain
-    assert "abhor  vt. 痛恨；憎恶" in plain
+    assert "Meaning review:" not in plain
     assert "Example sentences:" not in plain
     assert "The researcher used abhor carefully" not in plain
     assert "Word   Phonetic" in plain
-    assert "abhor  UK: /əb'hɔː(r)/ US: /əb'hɔːr/  vt. 痛恨；憎恶" in plain
+    assert "|++---|  abhor  UK: /əb'hɔː(r)/ US: /əb'hɔːr/  vt. 痛恨；憎恶" in plain
 
 
 def test_render_material_mapping_has_three_aligned_columns() -> None:
@@ -219,6 +219,11 @@ def test_render_material_mapping_has_three_aligned_columns() -> None:
             "abbreviate": "vt.",
             "abhor": "vt.",
         },
+        "target_review_stages": {
+            "abate": 1,
+            "abbreviate": 3,
+            "abhor": 0,
+        },
         "target_translations": {
             "abate": ["减少", "减轻", "废除", "失效"],
             "abbreviate": ["使简短", "缩简", "缩略"],
@@ -232,9 +237,9 @@ def test_render_material_mapping_has_three_aligned_columns() -> None:
     header = lines[lines.index("Vocabulary mapping:") + 1]
     first = lines[lines.index("Vocabulary mapping:") + 2]
     second = lines[lines.index("Vocabulary mapping:") + 3]
-    assert header.startswith("Word")
-    assert first.startswith("abate       UK: /əˈbeɪt/")
-    assert second.startswith("abbreviate  UK: /əˈbriːvieɪt/")
+    assert header.startswith("State")
+    assert first.startswith("|+----|  abate       UK: /əˈbeɪt/")
+    assert second.startswith("|+++--|  abbreviate  UK: /əˈbriːvieɪt/")
     assert first.rstrip().endswith("vt. 减少；减轻；废除；失效")
 
 
@@ -288,11 +293,13 @@ def test_plan_word_table_uses_fixed_word_pos_and_phonetic_columns() -> None:
     lines = rendered.splitlines()
     header = next(line for line in lines if line.startswith("No."))
     rows = [line for line in lines if line[:2].strip(".").isdigit()]
+    state_start = header.index("State")
     word_start = header.index("Word")
     pos_start = header.index("POS")
     phonetic_start = header.index("Phonetic")
-    assert all(row.index(row.split()[1]) == word_start for row in rows)
-    assert all(row.index(row.split()[2]) == pos_start for row in rows)
+    assert all(row.index("|-----|") == state_start for row in rows)
+    assert all(row.index(row.split()[2]) == word_start for row in rows)
+    assert all(row.index(row.split()[3]) == pos_start for row in rows)
     assert all(row.index("UK:") == phonetic_start for row in rows)
     meaning_lines = [line for line in lines if "Meaning:" in line]
     assert len(meaning_lines) == 3
@@ -348,8 +355,10 @@ def test_s_shortcut_skips_without_progress(toolbox: LexiPilotToolbox) -> None:
 
 
 def test_stage_marks_use_dashes() -> None:
-    assert stage_marks(3) == "Stage: ---"
-    assert stage_marks(0) == "Stage: -"
+    assert stage_marks(3) == "Stage: |+++--|"
+    assert stage_marks(0) == "Stage: |-----|"
+    assert stage_badge(3) == "|+++--|"
+    assert stage_badge(0) == "|-----|"
 
 
 def test_summary_none_values_are_dim_not_vocabulary_colors(toolbox: LexiPilotToolbox) -> None:
