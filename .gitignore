@@ -6,6 +6,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 performance_reports/
+benchmark_reports/
 .lexipilot_materials/
 .vocab_progress/
 .vocab_progress_backups/

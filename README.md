@@ -145,6 +145,65 @@ Inspect a safe summary:
 python3 scripts/show_latest_performance.py
 ```
 
+## Radeon Inference Optimization
+
+LexiPilot includes a repeatable benchmark for comparing Qwen thinking mode on the same dedicated Radeon endpoint:
+
+- Baseline: `QWEN_ENABLE_THINKING=true`
+- Optimized demo setting: `QWEN_ENABLE_THINKING=false`
+- Model: `Qwen/Qwen3-8B`
+- Backend: OpenAI-compatible vLLM endpoint on dedicated AMD Radeon Cloud
+- Workload A: Agent planning with structured Tool Calling
+- Workload B: bilingual academic practice generation
+
+Run a model-free benchmark pipeline check:
+
+```bash
+python3 scripts/benchmark_thinking.py \
+  --mock \
+  --warmups 1 \
+  --runs 5
+```
+
+Run the real benchmark only after endpoint verification passes:
+
+```bash
+python3 scripts/test_radeon_endpoint.py \
+  --env-file ../aiagent/.env
+
+FORCE_COLOR=1 python3 scripts/benchmark_thinking.py \
+  --env-file ../aiagent/.env \
+  --warmups 1 \
+  --runs 5
+```
+
+Reports are written under `benchmark_reports/thinking_<timestamp>/`:
+
+- `raw_results.json`
+- `summary.json`
+- `summary.md`
+
+Use only a non-mock report with `benchmark_complete=true` as submission performance evidence. Mock reports are labeled `mock_data=true` and `hardware_result=false`.
+
+### Measured Result
+
+The final benchmark ran on August 5, 2026 against the dedicated endpoint with one warm-up and five measured requests per mode and workload. Both modes used `temperature=0`, `max_tokens=700`, a 90-second timeout, identical prompts and tools, and alternating measured order.
+
+| Workload | Metric | Thinking Enabled | Thinking Disabled |
+|---|---|---:|---:|
+| Agent planning | Median latency | 13.7371 s | 13.7773 s |
+| Agent planning | P95 latency | 14.2909 s | 14.0693 s |
+| Agent planning | Client-observed completion tokens/s | 22.0571 | 21.9927 |
+| Agent planning | Structured Tool Calling success | 100% | 100% |
+| Bilingual generation | Median latency | 7.0341 s | 6.5433 s |
+| Bilingual generation | P95 latency | 11.4237 s | 13.1206 s |
+| Bilingual generation | Client-observed completion tokens/s | 17.9127 | 19.2563 |
+| Bilingual generation | Task validation success | 100% | 100% |
+
+Disabling thinking produced no clear planning improvement in this sample: median planning latency regressed by 0.29%, while Tool Calling reliability remained 100% in both modes. For bilingual generation, it reduced median latency by 6.98% and increased median client-observed completion tokens/s by 7.50%; completion-token counts were unchanged. Because the sample contains only five measured requests per group and the disabled-mode generation P95 was higher, these results should be treated as observed client-level behavior rather than a hardware-level speedup. LexiPilot uses `QWEN_ENABLE_THINKING=false` for the final demo because it preserved validation reliability and improved the median generation result.
+
+Source report: `benchmark_reports/thinking_20260805_230647/summary.md`.
+
 ## Installation
 
 ```bash
@@ -262,6 +321,7 @@ python3 -m py_compile \
   console_theme.py \
   scripts/smoke_lexipilot.py \
   scripts/test_radeon_endpoint.py \
+  scripts/benchmark_thinking.py \
   scripts/show_latest_performance.py \
   scripts/backup_default_profile.py \
   scripts/restore_default_profile.py
