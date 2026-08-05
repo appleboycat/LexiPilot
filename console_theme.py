@@ -189,14 +189,24 @@ class Console:
         progress_width = 20
 
         started_ratio = (started / total) if total > 0 else 0.0
-        filled = max(0, min(progress_width, int(round(started_ratio * progress_width))))
-        progress_bar = "█" * filled + "░" * (progress_width - filled)
+        position_ratio = (position / total) if total > 0 else 0.0
+
+        def progress_bar(ratio: float) -> str:
+            filled = max(0, min(progress_width, int(round(ratio * progress_width))))
+            return "█" * filled + "░" * (progress_width - filled)
 
         rows = [
             ("Profile", str(summary.get("profile", ""))),
-            ("Started words", f"{started} / {total}"),
-            ("Learning coverage", f"[{progress_bar}] {started_ratio * 100:.1f}%"),
-            ("Vocabulary position", f"{position} / {total}"),
+            (
+                "Done",
+                f"{started} / {total}  [{progress_bar(started_ratio)}] "
+                f"{started_ratio * 100:.1f}%",
+            ),
+            (
+                "InProgress",
+                f"{position} / {total}  [{progress_bar(position_ratio)}] "
+                f"{position_ratio * 100:.1f}%",
+            ),
             ("Due today", str(summary.get("reviews_due_today", 0))),
             ("Historical misses", str(summary.get("total_incorrect_answers", 0))),
             ("Recent activity", f"{len(summary.get('recent_study_statistics', {}) or {})} days"),

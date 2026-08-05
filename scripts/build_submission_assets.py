@@ -185,8 +185,9 @@ def slide_1() -> Image.Image:
         text_size=27,
         gap=24,
     )
-    draw.text((118, 945), "<PARTICIPANT_OR_TEAM_NAME>", font=font(25, bold=True), fill=MUTED)
-    draw.text((118, 990), "github.com/appleboycat/LexiPilot", font=font(24), fill=MUTED)
+    draw.text((118, 925), "TEAM SHEEPDOG", font=font(25, bold=True), fill=MUTED)
+    draw.text((118, 965), "appleboycat  |  du-du-lu", font=font(23), fill=MUTED)
+    draw.text((118, 1005), "github.com/appleboycat/LexiPilot", font=font(22), fill=MUTED)
     return image
 
 
@@ -368,6 +369,9 @@ def build_presentation(slides: list[Path], destination: Path) -> None:
     presentation = Presentation()
     presentation.slide_width = Inches(13.333333)
     presentation.slide_height = Inches(7.5)
+    presentation.core_properties.title = "LexiPilot Presentation"
+    presentation.core_properties.author = "sheepdog - appleboycat, du-du-lu"
+    presentation.core_properties.subject = "AMD Radeon Hackathon 2026 Track 2"
     blank = presentation.slide_layouts[6]
     for image_path in slides:
         slide = presentation.slides.add_slide(blank)
@@ -387,7 +391,7 @@ def build_presentation_pdf(slides: list[Path], destination: Path) -> None:
         pdf.drawImage(str(image_path), 0, 0, width=page_size[0], height=page_size[1])
         pdf.showPage()
     pdf.setTitle("LexiPilot Presentation")
-    pdf.setAuthor("<PARTICIPANT_OR_TEAM_NAME>")
+    pdf.setAuthor("sheepdog - appleboycat, du-du-lu")
     pdf.save()
     atomic_replace(temporary, destination)
 
@@ -564,7 +568,7 @@ def build_spec_pdf(destination: Path) -> None:
         topMargin=0.55 * inch,
         bottomMargin=0.55 * inch,
         title="LexiPilot Project Specification",
-        author="<PARTICIPANT_OR_TEAM_NAME>",
+        author="sheepdog - appleboycat, du-du-lu",
         subject="AMD Radeon Hackathon 2026 Track 2",
     )
     story = markdown_story(SPEC_MD.read_text(encoding="utf-8"), page_width - left_margin - right_margin)

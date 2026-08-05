@@ -1,7 +1,9 @@
 # LexiPilot Submission v1.0 Candidate
 
-**Validation date:** `<FILLED BY FINAL VALIDATION>`  
-**Commit tested:** `<FILLED BY FINAL VALIDATION>`  
+**Validation date:** August 6, 2026
+
+**Base commit tested:** `bd2a5a4` plus the current uncommitted submission worktree
+
 **Recommended tag:** `submission-v1.0` (not created)
 
 ## Submission Scope
@@ -17,20 +19,29 @@
 
 ## Validation Results
 
-Final results are populated only after the independent fresh-clone validation:
-
 | Check | Result |
 |---|---|
-| Python compilation | `<PENDING>` |
-| Automated tests | `<PENDING>` |
-| Model-free smoke test | `<PENDING>` |
-| Fresh-clone smoke test | `<PENDING>` |
-| Sample index validation | `<PENDING>` |
-| Mock benchmark | `<PENDING>` |
-| Dedicated endpoint verification | `<PENDING>` |
-| Markdown link check | `<PENDING>` |
-| Credential and private-path scan | `<PENDING>` |
-| Independent temporary clone | `<PENDING>` |
+| Python compilation | PASS |
+| Automated tests | PASS - 127 tests |
+| Model-free smoke test | PASS |
+| Fresh-clone smoke test | PASS |
+| Sample index validation | PASS - 40 entries, 40 unique words |
+| Mock benchmark report pipeline | PASS - explicitly marked as mock |
+| Dedicated endpoint verification | PASS - completion and structured Tool Calling |
+| Markdown relative-link check | PASS - 27 links |
+| Public-text credential/private-path scan | PASS - 51 files |
+| Submission attachment validation | PASS - 21 required files |
+| Independent temporary clone | PASS - dependency install, tests, smoke, and submission checks |
+
+The independent validation cloned the repository into a temporary
+directory, applied the complete current worktree diff, installed
+`requirements.txt` into a new virtual environment, generated only synthetic
+demo data, and ran the full offline validation. The temporary directory was
+removed afterward.
+
+The local private vocabulary index was also validated in place without printing
+its contents: 4,250 entries, 4,250 unique words, sequences 1 through 4,297, and
+160 source pages. It remains excluded from the submission.
 
 ## Real Benchmark on Dedicated Endpoint
 

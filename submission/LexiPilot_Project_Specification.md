@@ -2,7 +2,10 @@
 
 **Project:** LexiPilot - A Private Adaptive Vocabulary Learning Agent  
 **Track:** AMD Radeon Hackathon 2026, Track 2  
-**Participant / Team:** `<PARTICIPANT_OR_TEAM_NAME>`  
+**Team:** `sheepdog`
+
+**Members:** `appleboycat`, `du-du-lu`
+
 **Repository:** https://github.com/appleboycat/LexiPilot  
 **Model:** Qwen/Qwen3-8B  
 **Inference backend:** OpenAI-compatible vLLM endpoint on a dedicated AMD Radeon Cloud instance  
@@ -319,15 +322,16 @@ resets the stage according to current behavior and updates correct/missed
 counts and the due date. LexiPilot does not silently create an unknown word.
 
 The `/status` command displays safe aggregates rather than the complete profile.
-Its progress map uses `S` for started-word coverage and `P` for the current
-sequence position; the interval between them represents positions passed by the
-new-word cursor that do not necessarily have card records. The `/activity
-[days]` command renders a GitHub-style heatmap from aggregated daily statistics
-without showing individual words.
+Its `Done` row combines the started-word count and coverage bar. Its matching
+`InProgress` row combines the current new-word cursor and position bar. Both
+counts remain visible because positions passed by the cursor do not necessarily
+have card records. The `/activity [days]` command renders a
+GitHub-style heatmap from aggregated daily statistics without showing
+individual words.
 
-For the real default profile, LexiPilot recommends a timestamped backup before
+For the real `toefl2026` profile, LexiPilot recommends a timestamped backup before
 recording answers. Automated tests and benchmarks use temporary or synthetic
-profiles and never depend on the real default profile.
+profiles and never depend on the real learner profile.
 
 ---
 
@@ -454,7 +458,7 @@ The automated suite covers:
 - privacy-safe performance reports;
 - API key and base URL redaction;
 - exact English and Chinese target highlighting;
-- default-profile backup and restoration;
+- primary-profile backup and restoration;
 - deterministic sample-data generation;
 - model-free benchmark reporting;
 - model-free and fresh-clone smoke workflows.

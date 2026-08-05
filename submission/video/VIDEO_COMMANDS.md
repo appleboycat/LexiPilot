@@ -56,7 +56,7 @@ Optional status commands:
 
 ```text
 /status
-/activity 28
+/activity 35
 ```
 
 Enter this learning goal:
@@ -97,14 +97,14 @@ Exit:
 /exit
 ```
 
-## 5. Optional Real Default-Profile Demo
+## 5. Optional Real `toefl2026` Profile Demo
 
 Back up first:
 
 ```bash
 python3 scripts/backup_default_profile.py
 FORCE_COLOR=1 python3 lexipilot.py \
-  --profile default \
+  --profile toefl2026 \
   --env-file .env \
   --backup-profile \
   --debug
@@ -114,7 +114,7 @@ Do not show private profile contents. Restore only when needed:
 
 ```bash
 python3 scripts/restore_default_profile.py \
-  --backup .vocab_progress_backups/default_<timestamp>
+  --backup .vocab_progress_backups/toefl2026_<timestamp>
 ```
 
 ## 6. Show Safe Performance Results

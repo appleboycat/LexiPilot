@@ -223,6 +223,14 @@ def _join_words(words: list[str]) -> str:
 
 
 FALLBACK_ENGLISH_SENTENCES = {
+    "abandon": "The researchers refused to abandon the field study when the first set of measurements proved incomplete.",
+    "abate": "To abate confusion about the unusual readings, the team recalibrated every sensor before collecting more evidence.",
+    "abbey": "The study monitored humidity around a restored abbey whose stone walls were vulnerable to long-term weather damage.",
+    "abbreviate": "Researchers agreed to abbreviate routine labels while preserving complete notes for every unusual observation.",
+    "aberrant": "An aberrant temperature reading prompted the team to inspect the instrument instead of accepting the value immediately.",
+    "abhor": "The lead scholar came to abhor careless shortcuts because one undocumented change could undermine the entire study.",
+    "abiding": "Her abiding commitment to accurate records helped the group explain the anomaly with confidence.",
+    "abrupt": "An abrupt drop in temperature led the team to compare the sensor data with the local weather station.",
     "farce": "A student newspaper first treated the delayed repair as a farce, but the researchers looked for evidence instead of ridicule.",
     "far-fetched": "They rejected a far-fetched rumor that the entire study had been invented to embarrass the administration.",
     "fatigue": "Survey data showed that fatigue rose sharply among students who had slept poorly for several nights.",
@@ -242,6 +250,14 @@ FALLBACK_ENGLISH_SENTENCES = {
 
 
 FALLBACK_CHINESE_SENTENCES = {
+    "abandon": "第一组测量不完整时，研究者没有放弃这项实地研究。",
+    "abate": "为了减轻异常读数造成的困惑，团队重新校准了每个传感器，然后再收集证据。",
+    "abbey": "这项研究监测了一座修道院周围的湿度，因为它的石墙容易受到长期天气变化的影响。",
+    "abbreviate": "研究者同意缩写常规标签，同时为每个异常观察保留完整记录。",
+    "aberrant": "一个异常的温度读数促使团队检查仪器，而不是立即接受这个数值。",
+    "abhor": "首席学者逐渐痛恨草率的捷径，因为一次没有记录的改动就可能破坏整项研究。",
+    "abiding": "她持久的严谨记录帮助团队有把握地解释了这个异常现象。",
+    "abrupt": "温度突然下降后，团队把传感器数据与当地气象站进行了比较。",
     "farce": "学生报纸起初把维修拖延写成一场笑剧，但研究者选择依据证据分析，而不是嘲笑。",
     "far-fetched": "他们排除了一个牵强的传言：整项研究是为了让校方难堪而编造的。",
     "fatigue": "调查数据显示，连续几晚睡眠不好后，学生的疲劳感明显上升。",

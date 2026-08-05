@@ -18,7 +18,7 @@ if [[ "${LEXIPILOT_DEMO:-0}" == "1" ]]; then
         --debug
 fi
 
-PROFILE="${LEXIPILOT_PROFILE:-default}"
+PROFILE="${LEXIPILOT_PROFILE:-toefl2026}"
 exec python3 lexipilot.py \
     --profile "$PROFILE" \
     --env-file "$ENV_FILE" \

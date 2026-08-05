@@ -9,9 +9,9 @@ from scripts.restore_default_profile import restore_default_profile
 
 def test_default_profile_backup(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.chdir(tmp_path)
-    profile = tmp_path / ".vocab_progress" / "default"
+    profile = tmp_path / ".vocab_progress" / "toefl2026"
     profile.mkdir(parents=True)
-    (profile / "progress.json").write_text(json.dumps({"profile": "default", "cards": {}}), encoding="utf-8")
+    (profile / "progress.json").write_text(json.dumps({"profile": "toefl2026", "cards": {}}), encoding="utf-8")
     backup = backup_default_profile()
     assert backup.exists()
     assert (backup / "progress.json").exists()
@@ -20,10 +20,10 @@ def test_default_profile_backup(monkeypatch, tmp_path: Path) -> None:
 
 def test_default_profile_restore(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.chdir(tmp_path)
-    profile = tmp_path / ".vocab_progress" / "default"
+    profile = tmp_path / ".vocab_progress" / "toefl2026"
     profile.mkdir(parents=True)
     (profile / "progress.json").write_text(json.dumps({"version": "current"}), encoding="utf-8")
-    backup = tmp_path / ".vocab_progress_backups" / "default_test"
+    backup = tmp_path / ".vocab_progress_backups" / "toefl2026_test"
     backup.mkdir(parents=True)
     (backup / "progress.json").write_text(json.dumps({"version": "backup"}), encoding="utf-8")
     restore_default_profile(backup, yes=True)

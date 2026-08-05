@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import random
 import sys
 import tempfile
 from datetime import date, timedelta
@@ -69,25 +70,37 @@ def demo_state(profile: str, today: date) -> dict[str, Any]:
     daily_seen: dict[str, list[int]] = {}
     daily_misses: dict[str, list[int]] = {}
     daily_miss_counts: dict[str, dict[str, int]] = {}
-    synthetic_days = [
-        (6, [1, 2, 3], {2: 2}),
-        (4, [4, 5, 6], {5: 2, 6: 1}),
-        (3, [2, 7, 8], {2: 1}),
-        (1, [5, 6, 9], {5: 1, 6: 3, 9: 1}),
-        (0, [2, 6, 9, 10], {2: 1, 6: 1, 9: 1}),
-    ]
-    for days_ago, seen, misses in synthetic_days:
+    rng = random.Random(20260806)
+    sequences = list(range(1, 13))
+    for days_ago in range(34, -1, -1):
         day = (today - timedelta(days=days_ago)).isoformat()
-        missed_total = sum(misses.values())
+        active = rng.random() < 0.72 or days_ago == 0
+        studied = rng.randint(8, 55) if active else 0
+        if active and days_ago % 11 == 0:
+            studied += rng.randint(20, 40)
+        new_count = min(studied, rng.randint(0, 4)) if active else 0
+        missed_total = rng.randint(0, max(1, studied // 6)) if active else 0
+        seen_count = min(len(sequences), max(1, studied // 5)) if active else 0
+        seen = sorted(rng.sample(sequences, seen_count)) if seen_count else []
+        miss_sequences = (
+            rng.sample(seen, min(len(seen), max(1, min(4, missed_total))))
+            if missed_total and seen
+            else []
+        )
+        misses = {seq: 0 for seq in miss_sequences}
+        for index in range(missed_total):
+            if miss_sequences:
+                misses[miss_sequences[index % len(miss_sequences)]] += 1
+
         daily_stats[day] = {
-            "studied": len(seen),
-            "new": 1 if days_ago >= 3 else 0,
-            "review": len(seen) - (1 if days_ago >= 3 else 0),
-            "remembered": max(0, len(seen) - len(misses)),
+            "studied": studied,
+            "new": new_count,
+            "review": studied - new_count,
+            "remembered": max(0, studied - missed_total),
             "missed": missed_total,
         }
         daily_seen[day] = seen
-        daily_misses[day] = list(misses)
+        daily_misses[day] = list(miss_sequences)
         daily_miss_counts[day] = {str(seq): count for seq, count in misses.items()}
 
     return {
@@ -144,6 +157,7 @@ def main() -> int:
     print("Started words: 12")
     print("Due today: 7")
     print("Historically missed words: 4")
+    print("Synthetic activity: 35 days")
     return 0
 
 

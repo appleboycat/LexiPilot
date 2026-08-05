@@ -3,10 +3,10 @@
 ## Required Title
 
 ```text
-Track 2, <PARTICIPANT_OR_TEAM_NAME>, LexiPilot
+Track 2, sheepdog, LexiPilot
 ```
 
-Replace the participant/team placeholder before opening the Pull Request.
+Team `sheepdog` members: `appleboycat` and `du-du-lu`.
 
 ## PR Body
 

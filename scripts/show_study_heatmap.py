@@ -155,14 +155,24 @@ def render_heatmap(
     active_days = sum(1 for item in data if item.words > 0)
     missed = sum(item.missed for item in data)
     best = max(data, key=lambda item: item.words) if data else None
+
+    def compact_progress(value: int, total: int, width: int = 10) -> str:
+        ratio = (value / total) if total > 0 else 0.0
+        filled = max(0, min(width, int(round(ratio * width))))
+        return f"[{'█' * filled}{'░' * (width - filled)}] {ratio * 100:.1f}%"
+
     heatmap_lines.append("")
-    heatmap_lines.append(f"Days: {len(data)}")
-    heatmap_lines.append(f"Active days: {active_days}")
-    heatmap_lines.append(f"Words reviewed: {total_words}")
-    heatmap_lines.append(f"Missed: {missed}")
+    heatmap_lines.append(
+        f"ActiveDays: {active_days}|{len(data)}  "
+        f"{compact_progress(active_days, len(data))}"
+    )
+    heatmap_lines.append(
+        f"Missed: {missed}|{total_words}  "
+        f"{compact_progress(missed, total_words)}"
+    )
     if best:
         heatmap_lines.append(f"Peak day: {best.day.isoformat()} ({best.words} words)")
-    heatmap_lines.append(f"Source: {source}")
+    heatmap_lines.append(source if source.startswith("profile [") else f"Source: {source}")
 
     legend_lines = [
         "Level    Mark  Words",

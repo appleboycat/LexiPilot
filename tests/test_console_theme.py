@@ -158,9 +158,12 @@ def test_profile_status_multiline_progress(capsys) -> None:
     assert "╭" in output
     assert "LexiPilot Status" in output
     assert "Profile:" in output and "default" in output
-    assert "Started words:" in output and "500 / 2000" in output
-    assert "Learning coverage:" in output and "[█████░░░░░░░░░░░░░░░] 25.0%" in output
-    assert "Vocabulary position:" in output and "1200 / 2000" in output
+    assert "Done:" in output
+    assert "500 / 2000  [█████░░░░░░░░░░░░░░░] 25.0%" in output
+    assert "InProgress:" in output
+    assert "1200 / 2000  [████████████░░░░░░░░] 60.0%" in output
+    assert "Started words:" not in output
+    assert "Vocabulary position:" not in output
     assert "Progress map:" not in output
     assert "Markers:" not in output
     assert "Due today:" in output and "120" in output

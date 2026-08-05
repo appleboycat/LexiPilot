@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Back up the existing default LexiPilot/vocab_trainer profile."""
+"""Back up the primary LexiPilot learner profile."""
 
 from __future__ import annotations
 
@@ -8,19 +8,21 @@ from datetime import datetime
 from pathlib import Path
 
 
-PROFILE_DIR = Path(".vocab_progress/default")
+PROFILE_ROOT = Path(".vocab_progress")
 BACKUP_ROOT = Path(".vocab_progress_backups")
+DEFAULT_PROFILE_NAME = "toefl2026"
 
 
-def backup_default_profile() -> Path:
-    if not PROFILE_DIR.exists():
-        raise SystemExit("Default profile does not exist: .vocab_progress/default")
+def backup_default_profile(profile: str = DEFAULT_PROFILE_NAME) -> Path:
+    profile_dir = PROFILE_ROOT / profile
+    if not profile_dir.exists():
+        raise SystemExit(f"Profile does not exist: {profile_dir}")
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    target = BACKUP_ROOT / f"default_{timestamp}"
+    target = BACKUP_ROOT / f"{profile}_{timestamp}"
     if target.exists():
         raise SystemExit(f"Backup already exists: {target}")
     target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(PROFILE_DIR, target)
+    shutil.copytree(profile_dir, target)
     return target
 
 

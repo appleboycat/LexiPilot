@@ -23,7 +23,8 @@ def test_heatmap_renders_demo_summary_without_color() -> None:
     assert "LexiPilot Study Activity" in output
     assert "Intensity Legend" in output
     assert "Level    Mark  Words" in output
-    assert "Active days:" in output
+    assert "ActiveDays: 12|28  [████░░░░░░] 42.9%" in output
+    assert "\n│ Days:" not in output
     assert "Source: deterministic random demo data" in output
     assert output.startswith("╭")
     assert output.endswith("╯")
@@ -43,11 +44,12 @@ def test_profile_activity_uses_recent_aggregated_daily_stats() -> None:
     output = render_heatmap(
         data,
         no_color=True,
-        source="aggregated learner activity for profile demo",
+        source="profile [demo]",
     )
-    assert "Words reviewed: 28" in output
-    assert "Missed: 7" in output
-    assert "Source: aggregated learner activity for profile demo" in output
+    assert "Missed: 7|28  [██░░░░░░░░] 25.0%" in output
+    assert "Words reviewed:" not in output
+    assert "profile [demo]" in output
+    assert "Source: profile [demo]" not in output
 
 
 def test_activity_color_depth_matches_legend(monkeypatch) -> None:

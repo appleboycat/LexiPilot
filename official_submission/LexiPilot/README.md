@@ -1,7 +1,10 @@
 # LexiPilot
 
 **Track:** Track 2 - Development & Local Deployment of Private AI Agents  
-**Participant / Team:** `<PARTICIPANT_OR_TEAM_NAME>`  
+**Team:** `sheepdog`
+
+**Members:** `appleboycat`, `du-du-lu`
+
 **Project:** LexiPilot - A Private Adaptive Vocabulary Learning Agent  
 **Source repository:** https://github.com/appleboycat/LexiPilot  
 **Demo video:** `<ADD_VIDEO_URL>`

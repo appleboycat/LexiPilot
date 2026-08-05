@@ -67,7 +67,7 @@ def test_active_session_detects_new_study_request() -> None:
 
 
 def test_activity_command_day_range() -> None:
-    assert parse_activity_days("/activity") == 28
+    assert parse_activity_days("/activity") == 35
     assert parse_activity_days("/activity 7") == 7
     with pytest.raises(ValueError):
         parse_activity_days("/activity 0")

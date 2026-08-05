@@ -5,7 +5,8 @@
 ## AMD Radeon Hackathon 2026 Submission
 
 - **Track:** Track 2 - Development & Local Deployment of Private AI Agents
-- **Participant / Team:** `<PARTICIPANT_OR_TEAM_NAME>`
+- **Team:** `sheepdog`
+- **Members:** `appleboycat`, `du-du-lu`
 - [Submission Index](submission/README.md)
 - [Project Specification](submission/LexiPilot_Project_Specification.pdf)
 - [Presentation](submission/LexiPilot_Presentation.pdf)
@@ -107,7 +108,7 @@ Progress remains in the existing `.vocab_progress/<profile>/progress.json` forma
 
 ## Reproducible Sample Data
 
-`examples/sample_vocab_index.json` contains 40 deterministic demo entries with independently written concise definitions and empty `source_text` fields. It contains no personal progress, credentials, or copied PDF lines. `scripts/setup_demo_data.py` creates an ignored synthetic profile with 12 started words, seven reviews due relative to the current date, four historically missed words, unlearned vocabulary, and several days of sample activity.
+`examples/sample_vocab_index.json` contains 40 deterministic demo entries with independently written concise definitions and empty `source_text` fields. It contains no personal progress, credentials, or copied PDF lines. `scripts/setup_demo_data.py` creates an ignored synthetic profile with 12 started words, seven reviews due relative to the current date, four historically missed words, unlearned vocabulary, and 35 days of reproducible seeded activity.
 
 Use explicit paths when integrating another permitted vocabulary source:
 
@@ -165,8 +166,8 @@ Safe profile views:
 ```
 
 `/activity` renders a framed, color-depth study-intensity heatmap from
-aggregated daily statistics. It does not print individual words or the complete
-profile.
+35 days of aggregated daily statistics by default. It does not print individual
+words or the complete profile.
 
 ## Architecture
 
@@ -402,7 +403,7 @@ Or let the CLI create one before study:
 
 ```bash
 FORCE_COLOR=1 python3 lexipilot.py \
-  --profile default \
+  --profile toefl2026 \
   --env-file .env \
   --backup-profile \
   --debug
@@ -412,7 +413,7 @@ Restore if needed:
 
 ```bash
 python3 scripts/restore_default_profile.py \
-  --backup .vocab_progress_backups/default_<timestamp>
+  --backup .vocab_progress_backups/toefl2026_<timestamp>
 ```
 
 Prompt:

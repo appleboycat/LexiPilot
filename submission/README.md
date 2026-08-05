@@ -2,7 +2,10 @@
 
 **Track:** Track 2 - Development & Local Deployment of Private AI Agents  
 **Project:** LexiPilot - A Private Adaptive Vocabulary Learning Agent  
-**Participant / Team:** `<PARTICIPANT_OR_TEAM_NAME>`  
+**Team:** `sheepdog`
+
+**Members:** `appleboycat`, `du-du-lu`
+
 **Source:** https://github.com/appleboycat/LexiPilot
 
 ## Submission Materials
@@ -43,7 +46,7 @@ Official instructions also require a fork of the contest repository, an English
 Pull Request, and a title in the form:
 
 ```text
-Track 2, <PARTICIPANT_OR_TEAM_NAME>, LexiPilot
+Track 2, sheepdog, LexiPilot
 ```
 
 Source: https://github.com/AMD-DEV-CONTEST/Radeon-hackathon-2026-07/

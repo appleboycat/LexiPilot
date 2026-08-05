@@ -16,6 +16,7 @@ from scripts.backup_default_profile import backup_default_profile
 from scripts.show_study_heatmap import activity_from_daily_stats, render_heatmap
 
 REPO_ROOT = Path(__file__).resolve().parent
+LEXIPILOT_DEFAULT_PROFILE = "toefl2026"
 
 
 def print_banner(profile: str, runtime: LexiPilotRuntime, console: Console) -> None:
@@ -61,7 +62,7 @@ def print_profile_activity(
         render_heatmap(
             activity,
             no_color=not bool(console.theme.enabled),
-            source=f"aggregated learner activity for profile {profile}",
+            source=f"profile [{profile}]",
         )
     )
 
@@ -69,7 +70,7 @@ def print_profile_activity(
 def parse_activity_days(command: str) -> int:
     parts = command.split()
     if len(parts) == 1:
-        return 28
+        return 35
     if len(parts) != 2 or not parts[1].isdigit():
         raise ValueError("Usage: /activity [days], where days is between 1 and 365.")
     days = int(parts[1])
@@ -98,7 +99,7 @@ def looks_like_new_study_request(text: str) -> bool:
 
 
 def resolve_data_paths(args: argparse.Namespace) -> tuple[str, Path | None, Path | None]:
-    profile = args.profile or ("demo" if args.demo else "default")
+    profile = args.profile or ("demo" if args.demo else LEXIPILOT_DEFAULT_PROFILE)
     index_path = Path(args.index_file).expanduser() if args.index_file else None
     progress_root = Path(args.progress_root).expanduser() if args.progress_root else None
     if args.demo:
@@ -109,7 +110,10 @@ def resolve_data_paths(args: argparse.Namespace) -> tuple[str, Path | None, Path
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="LexiPilot private adaptive vocabulary learning agent.")
-    parser.add_argument("--profile", help="Learner profile name (default: default, or demo with --demo)")
+    parser.add_argument(
+        "--profile",
+        help=f"Learner profile name (default: {LEXIPILOT_DEFAULT_PROFILE}, or demo with --demo)",
+    )
     parser.add_argument("--env-file", help="Optional environment file (public default: .env)")
     parser.add_argument("--index-file", help="Explicit vocabulary index JSON path")
     parser.add_argument("--progress-root", help="Explicit learner-profile root directory")
@@ -117,7 +121,11 @@ def main() -> None:
     parser.add_argument("--deterministic", action="store_true", help="Bypass model planning and use the deterministic planner")
     parser.add_argument("--debug", action="store_true", help="Show concise tool timeline")
     parser.add_argument("--no-color", action="store_true", help="Disable terminal colors")
-    parser.add_argument("--backup-profile", action="store_true", help="Back up the default profile before recording answers")
+    parser.add_argument(
+        "--backup-profile",
+        action="store_true",
+        help=f"Back up the {LEXIPILOT_DEFAULT_PROFILE} profile before recording answers",
+    )
     parser.add_argument(
         "--model-loop",
         action="store_true",
@@ -159,17 +167,17 @@ def main() -> None:
     )
     print_banner(profile, runtime, console)
     backed_up = False
-    real_default = (
-        profile == "default"
+    real_primary_profile = (
+        profile == LEXIPILOT_DEFAULT_PROFILE
         and (progress_root is None or progress_root.resolve() == (REPO_ROOT / ".vocab_progress").resolve())
     )
-    if real_default:
-        console.status("Using existing learner profile: default")
+    if real_primary_profile:
+        console.status(f"Using existing learner profile: {LEXIPILOT_DEFAULT_PROFILE}")
         console.status("A backup is recommended before recording answers.")
         if args.backup_profile:
-            path = backup_default_profile()
+            path = backup_default_profile(LEXIPILOT_DEFAULT_PROFILE)
             backed_up = True
-            console.saved(f"Default profile backup: {path}")
+            console.saved(f"Profile backup: {path}")
     print_profile_status(profile, toolbox, console, runtime, debug=args.debug)
 
     while True:
@@ -212,10 +220,10 @@ def main() -> None:
         if agent.session is None:
             print_response(agent.plan(text))
         else:
-            if real_default and args.backup_profile and not backed_up:
-                path = backup_default_profile()
+            if real_primary_profile and args.backup_profile and not backed_up:
+                path = backup_default_profile(LEXIPILOT_DEFAULT_PROFILE)
                 backed_up = True
-                console.saved(f"Default profile backup: {path}")
+                console.saved(f"Profile backup: {path}")
             print_response(agent.handle_answer(text))
 
 

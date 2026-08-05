@@ -10,8 +10,8 @@ recording.
 
 **Narration:**
 
-Hello. I am `<PARTICIPANT_OR_TEAM_NAME>`. This is LexiPilot, a private adaptive
-vocabulary learning agent for AMD Radeon Hackathon Track 2.
+Hello. We are appleboycat and du-du-lu from team sheepdog. This is LexiPilot, a
+private adaptive vocabulary learning agent for AMD Radeon Hackathon Track 2.
 
 Most vocabulary tools show static lists. They do not understand which words I
 miss repeatedly, which reviews are due, or how much time I have today.
@@ -47,13 +47,14 @@ instance, not inferred by the application.
 
 ## 1:15-2:45 - Live Agent Demo
 
-**Screen:** Terminal with `FORCE_COLOR=1`; run the sample or backed-up default
+**Screen:** Terminal with `FORCE_COLOR=1`; run the sample or backed-up `toefl2026`
 profile demo.
 
 **Narration:**
 
-First, LexiPilot shows safe profile aggregates. The S and P markers distinguish
-started-word coverage from vocabulary position. I can also enter slash activity to see recent
+First, LexiPilot shows safe profile aggregates. Matching Done and InProgress
+bars show started-word coverage and the current vocabulary cursor. The
+underlying counts remain visible. I can also enter slash activity to see recent
 study intensity without exposing individual history.
 
 Now I give one natural-language goal:

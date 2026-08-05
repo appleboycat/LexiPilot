@@ -185,6 +185,28 @@ def test_local_academic_fallback_avoids_key_factor_template() -> None:
     assert "征用公共储物间" in chinese
 
 
+def test_sample_fallback_subsets_remain_semantically_coherent() -> None:
+    entries = [
+        {"word": "abate", "definition": "v. 减弱；缓和"},
+        {"word": "abbreviate", "definition": "v. 缩写；缩短"},
+        {"word": "abhor", "definition": "v. 痛恨；憎恶"},
+        {"word": "aberrant", "definition": "adj. 异常的；偏离常规的"},
+        {"word": "abrupt", "definition": "adj. 突然的；唐突的"},
+        {"word": "abbey", "definition": "n. 修道院"},
+    ]
+    result = local_academic_practice(entries)
+    english = result["english"]
+    chinese = result["chinese"]
+    assert "abbreviate the problem" not in english
+    assert "treated abbey as a concrete issue" not in english
+    assert "recalibrated every sensor" in english
+    assert "abbreviate routine labels" in english
+    assert "restored abbey" in english
+    assert "重新校准了每个传感器" in chinese
+    assert "缩写常规标签" in chinese
+    assert "一座修道院" in chinese
+
+
 def test_local_academic_fallback_uses_unknown_words_in_real_context() -> None:
     entries = [
         {"word": "faucet", "definition": "n. 旋塞；插口"},

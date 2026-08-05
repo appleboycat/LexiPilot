@@ -1,0 +1,38 @@
+Hello. We are appleboycat and du-du-lu from team sheepdog. This is LexiPilot,
+a private adaptive vocabulary learning agent for AMD Radeon Hackathon Track 2.
+
+Traditional vocabulary applications use static lists. They do not understand
+which words are due, which words a learner repeatedly misses, or how much study
+time is available. LexiPilot turns a natural-language goal and persistent
+learner history into an adaptive session.
+
+LexiPilot uses a hybrid Agent architecture. Qwen3-8B runs through a vLLM
+endpoint on a dedicated AMD Radeon environment. During planning, the model can
+select only read-only tools. It inspects a safe profile summary, due reviews,
+frequently missed words, and available new words. Its JSON plan is validated
+against real tool evidence. Unknown words, write requests, and malformed plans
+are rejected. If model planning fails, LexiPilot uses a deterministic fallback.
+
+The status panel shows the toefl2026 profile, progress, due reviews, misses, and
+recent activity. The learner enters a goal in ordinary English. The model
+selects learner-state tools and returns a validated plan. A deterministic
+controller presents cards and accepts explicit answers. Only confirmed answers
+can update spaced repetition and persistent progress.
+
+A correct answer advances the review stage. A wrong answer resets the stage and
+makes that word a priority. The learner can also request an etymology hint. At
+the end, LexiPilot creates a bilingual academic passage. Target English words
+and their Chinese meanings are highlighted, and the session is saved once.
+
+Learner files remain in the user-controlled environment. Only minimum task
+context is sent to the dedicated endpoint. Credentials, private endpoints,
+complete profiles, prompts, and model responses are excluded from reports and
+version control.
+
+Our benchmark compares Qwen thinking enabled and disabled with equal settings.
+Tool Calling validation reached one hundred percent in both modes. These are
+client-observed end-to-end measurements, not raw GPU throughput.
+
+LexiPilot combines Radeon-hosted inference, grounded Tool Calling, deterministic
+writes, long-term memory, and targeted practice in one reliable Agent workflow.
+Thank you.

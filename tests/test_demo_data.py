@@ -67,7 +67,30 @@ def test_setup_demo_data_creates_valid_synthetic_profile(tmp_path: Path) -> None
     assert state["last_new_seq"] == 12
     assert len(state["cards"]) == 12
     assert sum(card["due"] <= "2026-08-05" for card in state["cards"].values()) == 7
+    assert len(state["daily_stats"]) == 35
+    assert min(state["daily_stats"]) == "2026-07-02"
+    assert max(state["daily_stats"]) == "2026-08-05"
+    assert 20 <= sum(item["studied"] > 0 for item in state["daily_stats"].values()) < 35
     assert state["demo_data"] is True
+
+
+def test_demo_activity_generation_is_reproducible(tmp_path: Path) -> None:
+    first_root = tmp_path / "first"
+    second_root = tmp_path / "second"
+    first = setup_demo_data(
+        index_path=SAMPLE_INDEX,
+        progress_root=first_root,
+        today=date(2026, 8, 5),
+    )
+    second = setup_demo_data(
+        index_path=SAMPLE_INDEX,
+        progress_root=second_root,
+        today=date(2026, 8, 5),
+    )
+    first_state = json.loads(first.read_text(encoding="utf-8"))
+    second_state = json.loads(second.read_text(encoding="utf-8"))
+    assert first_state["daily_stats"] == second_state["daily_stats"]
+    assert first_state["daily_miss_counts"] == second_state["daily_miss_counts"]
 
 
 def test_demo_data_setup_is_idempotent_without_force(tmp_path: Path) -> None:
